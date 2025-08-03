@@ -4,7 +4,6 @@
 import fs from 'fs';
 import path from 'path';
 import type {Model} from './mock-data';
-import { revalidatePath } from 'next/cache';
 
 // Helper function to parse CSV data
 function parseCSV(csv: string): Model[] {
@@ -56,7 +55,6 @@ const csvFilePath = path.join(process.cwd(), 'public', 'models.csv');
 
 export async function getModels(): Promise<Model[]> {
   try {
-    revalidatePath('/account/profile');
     const csvData = fs.readFileSync(csvFilePath, 'utf-8');
     return parseCSV(csvData);
   } catch (error) {
@@ -67,7 +65,6 @@ export async function getModels(): Promise<Model[]> {
 
 export async function getModelById(id: string): Promise<Model | undefined> {
   const models = await getModels();
-  revalidatePath(`/profile/${id}`);
   return models.find(model => model.id === id);
 }
 
