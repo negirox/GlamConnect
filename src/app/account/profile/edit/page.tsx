@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2 } from "lucide-react";
+import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2, CircleCheck, CircleX } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState, useEffect } from "react";
@@ -38,7 +38,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { getSession } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 
+const MAX_FILE_SIZE_MB = 2;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+type UploadableFile = {
+    file: File;
+    status: 'pending' | 'uploading' | 'success' | 'failed';
+    error?: string;
+    progress: number;
+}
+
+type UploadDialogState = {
+    isOpen: boolean;
+    files: UploadableFile[];
+    field: keyof Model | null;
+    isMultiple: boolean;
+}
 
 const profileSchema = z.object({
     name: z.string().min(1, 'Full Name is required'),
@@ -71,7 +89,8 @@ export default function ProfileManagementPage() {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
-  const [isUploading, setIsUploading] = useState<Record<string, boolean>>({});
+  const [uploadDialog, setUploadDialog] = useState<UploadDialogState>({ isOpen: false, files: [], field: null, isMultiple: false });
+  
   const router = useRouter();
 
   const [consentBikini, setConsentBikini] = useState(false);
@@ -104,78 +123,125 @@ export default function ProfileManagementPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof Model, isMultiple: boolean) => {
-    if (!model || !e.target.files) return;
-
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, field: keyof Model, isMultiple: boolean) => {
+    if (!e.target.files) return;
     const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+    
+    setUploadDialog({
+        isOpen: true,
+        files: files.map(f => ({
+            file: f,
+            status: f.size > MAX_FILE_SIZE_BYTES ? 'failed' : 'pending',
+            error: f.size > MAX_FILE_SIZE_BYTES ? `File exceeds ${MAX_FILE_SIZE_MB}MB` : undefined,
+            progress: 0,
+        })),
+        field,
+        isMultiple,
+    });
 
-    setIsUploading(prev => ({ ...prev, [field]: true }));
+    // Reset the input value to allow selecting the same file again
+    e.target.value = "";
+  };
+  
+  const startUpload = async () => {
+    if (!model || !uploadDialog.field) return;
 
-    const maxSizeInMB = field === 'profilePicture' ? 0.5 : 2;
+    const { field, files, isMultiple } = uploadDialog;
+    
+    // Filter out files that already failed validation
+    const filesToUpload = files.filter(f => f.status === 'pending');
+    if (filesToUpload.length === 0) {
+        // If all files are invalid, maybe update state to show all failed and then user can close.
+        if(files.every(f => f.status === 'failed')) {
+           toast({ title: "Upload Error", description: "All selected files are invalid.", variant: "destructive" });
+        }
+        return;
+    }
+
+    // Set status to 'uploading' for pending files
+    setUploadDialog(prev => ({
+        ...prev,
+        files: prev.files.map(f => f.status === 'pending' ? { ...f, status: 'uploading', progress: 50 } : f)
+    }));
 
     try {
-        let updatedImagePaths: string[] | string = [];
+      // 1. Delete old images first
+      if (isMultiple) {
+          const oldImages = model[field] as string[] | undefined;
+          if (Array.isArray(oldImages) && oldImages.length > 0) {
+              await Promise.all(oldImages.map(img => deleteImage(img)));
+          }
+      } else {
+           const oldImage = model[field] as string | undefined;
+          if (typeof oldImage === 'string' && oldImage) {
+              await deleteImage(oldImage);
+          }
+      }
 
-        // For multiple images, delete all old images first.
-        if (isMultiple) {
-            const oldImages = model[field] as string[] | undefined;
-            if (Array.isArray(oldImages) && oldImages.length > 0) {
-                await Promise.all(oldImages.map(img => deleteImage(img)));
-            }
-        } else {
-             const oldImage = model[field] as string | undefined;
-            if (typeof oldImage === 'string' && oldImage) {
-                await deleteImage(oldImage);
-            }
-        }
+      // 2. Upload new images
+      const uploadPromises = filesToUpload.map(async (uploadableFile) => {
+        const formData = new FormData();
+        formData.append('file', uploadableFile.file);
+        const result = await uploadImage(formData, MAX_FILE_SIZE_MB);
+        
+        return {
+          ...result,
+          originalName: uploadableFile.file.name,
+        };
+      });
 
+      const results = await Promise.allSettled(uploadPromises);
 
-        if (isMultiple) {
-            const newPaths: string[] = [];
-            for (const file of files) {
-                const formData = new FormData();
-                formData.append('file', file);
-                const result = await uploadImage(formData, maxSizeInMB);
+      const newPaths: string[] = [];
+      const finalFilesState: UploadableFile[] = [...uploadDialog.files];
 
-                if (!result.success) {
-                    throw new Error(result.message || `Failed to upload ${file.name}.`);
-                }
-                if(result.filePath) {
-                    newPaths.push(result.filePath);
-                }
-            }
-            updatedImagePaths = newPaths;
-        } else {
-            // For single image
-            const formData = new FormData();
-            formData.append('file', files[0]);
-            const result = await uploadImage(formData, maxSizeInMB);
-            if (!result.success) {
-                 throw new Error(result.message || 'An unknown upload error occurred.');
-            }
-            updatedImagePaths = result.filePath!;
-        }
+      results.forEach((result, index) => {
+          const originalFile = filesToUpload[index];
+          const fileIndexInDialog = uploadDialog.files.findIndex(f => f.file.name === originalFile.file.name);
 
-        await updateModel(model.id, { [field]: updatedImagePaths });
-        await fetchModel();
+          if (result.status === 'fulfilled' && result.value.success && result.value.filePath) {
+              newPaths.push(result.value.filePath);
+              finalFilesState[fileIndexInDialog] = { ...finalFilesState[fileIndexInDialog], status: 'success', progress: 100 };
+          } else {
+              const errorMessage = result.status === 'fulfilled' ? result.value.message : 'An unknown error occurred.';
+              finalFilesState[fileIndexInDialog] = { ...finalFilesState[fileIndexInDialog], status: 'failed', error: errorMessage, progress: 0 };
+          }
+      });
 
-        toast({
-            title: "Upload Successful",
-            description: "Your images have been uploaded and your profile is updated.",
-        });
+      setUploadDialog(prev => ({ ...prev, files: finalFilesState }));
+
+      // 3. Update model with new paths if any succeeded
+      if (newPaths.length > 0) {
+          const updatePayload = isMultiple ? { [field]: newPaths } : { [field]: newPaths[0] };
+          await updateModel(model.id, updatePayload);
+          toast({
+              title: "Upload Complete",
+              description: `${newPaths.length} image(s) uploaded successfully.`,
+          });
+          await fetchModel(); // Refresh model data
+      } else {
+           toast({
+              title: "Upload Failed",
+              description: "No images were successfully uploaded.",
+              variant: 'destructive'
+           });
+      }
 
     } catch (error: any) {
-        console.error("Upload failed", error);
+        console.error("Upload process failed", error);
         toast({
-            title: "Upload Failed",
-            description: error.message || "There was an error uploading your images.",
+            title: "Upload Process Failed",
+            description: error.message || "An unexpected error occurred during the upload process.",
             variant: "destructive",
         });
-    } finally {
-        setIsUploading(prev => ({ ...prev, [field]: false }));
+        // Mark all uploading files as failed
+        setUploadDialog(prev => ({
+            ...prev,
+            files: prev.files.map(f => f.status === 'uploading' ? { ...f, status: 'failed', error: 'Process failed' } : f)
+        }));
     }
-};
+  }
+
 
   const handleFormSubmit = async (tab: string, data: any) => {
     if (!model) return;
@@ -284,8 +350,47 @@ export default function ProfileManagementPage() {
         </div>
     )
   }
+  
+  const allUploadsFinished = uploadDialog.files.every(f => f.status === 'success' || f.status === 'failed');
 
   return (
+    <>
+    <Dialog open={uploadDialog.isOpen} onOpenChange={(isOpen) => !isOpen && setUploadDialog(prev => ({...prev, isOpen: false}))}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirm Upload</DialogTitle>
+          <DialogDescription>
+            Review your files before uploading. Files over {MAX_FILE_SIZE_MB}MB will be ignored.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 max-h-80 overflow-y-auto">
+            {uploadDialog.files.map((f, i) => (
+                <div key={i} className="flex items-center gap-4 p-2 rounded-md">
+                   <div className="flex-1 truncate">
+                        <p className="font-medium truncate">{f.file.name}</p>
+                        <p className="text-sm text-muted-foreground">{(f.file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                        {f.status === 'uploading' && <Progress value={f.progress} className="h-2 mt-1" />}
+                        {f.status === 'failed' && <p className="text-sm text-destructive">{f.error}</p>}
+                   </div>
+                   {f.status === 'pending' && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+                   {f.status === 'uploading' && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
+                   {f.status === 'success' && <CircleCheck className="h-5 w-5 text-green-500" />}
+                   {f.status === 'failed' && <CircleX className="h-5 w-5 text-destructive" />}
+                </div>
+            ))}
+        </div>
+        <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialog(prev => ({...prev, isOpen: false}))} disabled={!allUploadsFinished}>
+                {allUploadsFinished ? 'Close' : 'Cancel'}
+            </Button>
+            <Button onClick={startUpload} disabled={uploadDialog.files.every(f => f.status !== 'pending') || !allUploadsFinished}>
+                <Upload className="mr-2 h-4 w-4" />
+                Start Upload
+            </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    
     <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
       <div className="space-y-2 mb-8">
         <h1 className="text-4xl font-headline font-bold">Manage Your Profile</h1>
@@ -311,16 +416,15 @@ export default function ProfileManagementPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                  <div className="space-y-2">
-                    <Label>Profile Picture (Max 500KB)</Label>
+                    <Label>Profile Picture (Max {MAX_FILE_SIZE_MB}MB)</Label>
                     <div className="flex items-center gap-4">
                         <div className="relative h-24 w-24 rounded-full">
                             <Image src={model.profilePicture} alt="Profile Picture" fill className="rounded-full object-cover" />
-                             {isUploading.profilePicture && <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full"><Loader2 className="h-6 w-6 animate-spin text-white"/></div>}
                         </div>
                         <Button asChild type="button" variant="outline">
                             <Label>
                                 <Upload className="mr-2 h-4 w-4" />Upload New
-                                <Input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'profilePicture', false)} disabled={isUploading.profilePicture}/>
+                                <Input type="file" className="hidden" accept="image/*" onChange={e => handleFileSelect(e, 'profilePicture', false)}/>
                              </Label>
                         </Button>
                     </div>
@@ -472,20 +576,16 @@ export default function ProfileManagementPage() {
             <CardHeader>
               <CardTitle className="font-headline">Portfolio Showcase</CardTitle>
               <CardDescription>
-                Upload your best work (Max 2MB per image). High-resolution images are recommended. These images are publicly visible. <span className="font-bold text-destructive">Uploading new images will replace all existing ones.</span>
+                Upload your best work (Max {MAX_FILE_SIZE_MB}MB per image). High-resolution images are recommended. These images are publicly visible. <span className="font-bold text-destructive">Uploading new images will replace all existing ones.</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flex items-center justify-center w-full mb-6">
                     <Label htmlFor="portfolio-upload" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
-                         {isUploading.portfolioImages ? <Loader2 className="h-10 w-10 animate-spin text-muted-foreground"/> :
-                            <>
-                                <Upload className="w-10 h-10 mb-3 text-muted-foreground"/>
-                                <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-muted-foreground">PNG, JPG or GIF (Max 2MB each)</p>
-                            </>
-                         }
-                        <Input id="portfolio-upload" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'portfolioImages', true)} disabled={isUploading.portfolioImages}/>
+                        <Upload className="w-10 h-10 mb-3 text-muted-foreground"/>
+                        <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG or GIF (Max {MAX_FILE_SIZE_MB}MB each)</p>
+                        <Input id="portfolio-upload" type="file" className="hidden" multiple onChange={e => handleFileSelect(e, 'portfolioImages', true)}/>
                     </Label>
                 </div>
                 <p className="font-semibold mt-6 mb-4">Current Portfolio ({model.portfolioImages.length} images):</p>
@@ -618,16 +718,14 @@ export default function ProfileManagementPage() {
                     </div>
                     {consentBikini && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Bikini Portfolio (Max 2MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
+                            <p className="font-semibold">Upload Bikini Portfolio (Max {MAX_FILE_SIZE_MB}MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-bikini" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
-                                    {isUploading.bikiniPortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
                                         <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
                                         <p>Click to upload or drag & drop</p>
                                     </div>
-                                    }
-                                    <Input id="dropzone-bikini" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'bikiniPortfolioImages', true)} disabled={isUploading.bikiniPortfolioImages}/>
+                                    <Input id="dropzone-bikini" type="file" className="hidden" multiple onChange={e => handleFileSelect(e, 'bikiniPortfolioImages', true)}/>
                                 </Label>
                             </div>
                             <div className="grid grid-cols-4 gap-2">
@@ -651,16 +749,14 @@ export default function ProfileManagementPage() {
                     </div>
                       {consentSemiNude && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Semi-Nude Portfolio (Max 2MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
+                            <p className="font-semibold">Upload Semi-Nude Portfolio (Max {MAX_FILE_SIZE_MB}MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-semi-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
-                                    {isUploading.semiNudePortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
                                         <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
                                         <p>Click to upload or drag & drop</p>
                                     </div>
-                                    }
-                                    <Input id="dropzone-semi-nude" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'semiNudePortfolioImages', true)} disabled={isUploading.semiNudePortfolioImages}/>
+                                    <Input id="dropzone-semi-nude" type="file" className="hidden" multiple onChange={e => handleFileSelect(e, 'semiNudePortfolioImages', true)}/>
                                 </Label>
                             </div>
                              <div className="grid grid-cols-4 gap-2">
@@ -684,16 +780,14 @@ export default function ProfileManagementPage() {
                     </div>
                      {consentNude && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Nude Portfolio (Max 2MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
+                            <p className="font-semibold">Upload Nude Portfolio (Max {MAX_FILE_SIZE_MB}MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
-                                    {isUploading.nudePortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
                                         <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
                                         <p>Click to upload or drag & drop</p>
                                     </div>
-                                    }
-                                    <Input id="dropzone-nude" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'nudePortfolioImages', true)} disabled={isUploading.nudePortfolioImages}/>
+                                    <Input id="dropzone-nude" type="file" className="hidden" multiple onChange={e => handleFileSelect(e, 'nudePortfolioImages', true)}/>
                                  </Label>
                             </div>
                             <div className="grid grid-cols-4 gap-2">
@@ -719,6 +813,7 @@ export default function ProfileManagementPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </>
   );
 }
 
