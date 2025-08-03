@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -9,14 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { getModelByEmail } from '@/lib/data-actions';
 import type { Model } from '@/lib/mock-data';
-import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag, Loader2, Link as LinkIcon, AlertCircle, Clock } from 'lucide-react';
+import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag, Loader2, Link as LinkIcon, AlertCircle, Clock, Upload, CircleCheck, CircleX, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { getSession } from '@/lib/auth-actions';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +28,26 @@ import { Select, SelectContent,  SelectItem, SelectTrigger, SelectValue } from '
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { uploadImage, deleteImage } from "@/lib/upload-actions";
+import { Progress } from "@/components/ui/progress";
+
+const MAX_FILE_SIZE_MB = 2;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+type UploadableFile = {
+    id: string; // Unique ID for each file object
+    file: File;
+    status: 'pending' | 'uploading' | 'success' | 'failed';
+    error?: string;
+    progress: number;
+}
+
+type UploadDialogState = {
+    isOpen: boolean;
+    files: UploadableFile[];
+    field: keyof Model | null;
+    isMultiple: boolean;
+}
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Full Name is required'),
@@ -69,6 +88,7 @@ export default function ProfileDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openDialog, setOpenDialog] = useState<string | null>(null);
+  const [uploadDialog, setUploadDialog] = useState<UploadDialogState>({ isOpen: false, files: [], field: null, isMultiple: false });
 
   const router = useRouter();
   const { toast } = useToast();
@@ -80,6 +100,7 @@ export default function ProfileDashboardPage() {
       return;
     }
     try {
+      setLoading(true);
       const fetchedModel = await getModelByEmail(session.email);
       setModel(fetchedModel || null);
     } catch (error) {
@@ -94,6 +115,139 @@ export default function ProfileDashboardPage() {
     fetchModel();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, field: keyof Model, isMultiple: boolean) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    
+    setUploadDialog({
+        isOpen: true,
+        files: files.map((f, i) => ({
+            id: `${f.name}-${i}`,
+            file: f,
+            status: f.size > MAX_FILE_SIZE_BYTES ? 'failed' : 'pending',
+            error: f.size > MAX_FILE_SIZE_BYTES ? `File exceeds ${MAX_FILE_SIZE_MB}MB` : undefined,
+            progress: 0,
+        })),
+        field,
+        isMultiple,
+    });
+
+    e.target.value = "";
+  };
+  
+  const removeFileFromQueue = (fileId: string) => {
+      setUploadDialog(prev => ({
+          ...prev,
+          files: prev.files.filter(f => f.id !== fileId)
+      }));
+  }
+
+  const startUpload = async () => {
+    if (!model || !uploadDialog.field) return;
+
+    const { field, files, isMultiple } = uploadDialog;
+    
+    const filesToUpload = files.filter(f => f.status === 'pending');
+    if (filesToUpload.length === 0) {
+        if(files.every(f => f.status === 'failed')) {
+           toast({ title: "Upload Error", description: "All selected files are invalid.", variant: "destructive" });
+        }
+        return;
+    }
+
+    setUploadDialog(prev => ({
+        ...prev,
+        files: prev.files.map(f => f.status === 'pending' ? { ...f, status: 'uploading' } : f)
+    }));
+    
+    try {
+        if (isMultiple) {
+          const oldImages = model[field] as string[] | undefined;
+          if (Array.isArray(oldImages) && oldImages.length > 0) {
+              await Promise.all(oldImages.map(img => deleteImage(img)));
+          }
+        } else if (!isMultiple && filesToUpload.length > 0) { // Only delete if we are actually uploading a new single image
+           const oldImage = model[field] as string | undefined;
+          if (typeof oldImage === 'string' && oldImage) {
+              await deleteImage(oldImage);
+          }
+        }
+
+      const uploadPromises = filesToUpload.map(async (uploadableFile) => {
+          setUploadDialog(prev => ({
+              ...prev,
+              files: prev.files.map(f => f.id === uploadableFile.id ? { ...f, progress: 50 } : f)
+          }));
+          const formData = new FormData();
+          formData.append('file', uploadableFile.file);
+          const result = await uploadImage(formData, MAX_FILE_SIZE_MB);
+          return { ...result, originalFileId: uploadableFile.id };
+      });
+
+      const results = await Promise.allSettled(uploadPromises);
+
+      const newPaths: string[] = [];
+      const finalFilesState = [...uploadDialog.files]; 
+
+      results.forEach(result => {
+         if (result.status === 'rejected') {
+            console.error("An upload promise was rejected:", result.reason);
+            return;
+         }
+
+          const { originalFileId, success, filePath, message } = result.value;
+          const fileIndex = finalFilesState.findIndex(f => f.id === originalFileId);
+
+          if (fileIndex === -1) return;
+
+          if (success && filePath) {
+              newPaths.push(filePath);
+              finalFilesState[fileIndex] = { ...finalFilesState[fileIndex], status: 'success', progress: 100 };
+          } else {
+              finalFilesState[fileIndex] = { ...finalFilesState[fileIndex], status: 'failed', error: message || 'An unknown error occurred.', progress: 0 };
+          }
+      });
+      
+      setUploadDialog(prev => ({...prev, files: finalFilesState}));
+
+      if (newPaths.length > 0) {
+          const updatePayload = isMultiple 
+              ? { [field]: newPaths }
+              : { [field]: newPaths[0] };
+          
+          await updateModel(model.id, updatePayload);
+
+          toast({
+              title: "Upload Complete",
+              description: `${newPaths.length} image(s) uploaded successfully.`,
+          });
+          await fetchModel(); 
+      }
+      
+      const failedCount = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
+      if (failedCount > 0) {
+           toast({
+              title: "Upload Incomplete",
+              description: `${failedCount} image(s) failed to upload.`,
+              variant: 'destructive'
+           });
+      }
+
+
+    } catch (error: any) {
+        console.error("Upload process failed", error);
+        toast({
+            title: "Upload Process Failed",
+            description: error.message || "An unexpected error occurred during the upload process.",
+            variant: "destructive",
+        });
+        setUploadDialog(prev => ({
+            ...prev,
+            files: prev.files.map(f => f.status === 'uploading' ? { ...f, status: 'failed', error: 'Process failed' } : f)
+        }));
+    }
+  }
 
   const handleFormSubmit = async (data: any, schema: any) => {
     if (!model) return;
@@ -270,8 +424,53 @@ export default function ProfileDashboardPage() {
     );
   }
 
+  const uploadInProgress = uploadDialog.files.some(f => f.status === 'uploading');
+  const allUploadsFinished = !uploadInProgress && uploadDialog.files.some(f => f.status === 'success' || f.status === 'failed');
+  const hasPendingFiles = uploadDialog.files.some(f => f.status === 'pending');
 
   return (
+    <>
+    <Dialog open={uploadDialog.isOpen} onOpenChange={(isOpen) => !uploadInProgress && !isOpen && setUploadDialog(prev => ({...prev, isOpen: false}))}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Upload Portfolio Images</DialogTitle>
+          <DialogDescription>
+            Review your files before uploading. New images will replace all existing ones. Files over {MAX_FILE_SIZE_MB}MB will be ignored.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
+            {uploadDialog.files.map((f) => (
+                <div key={f.id} className="flex items-center gap-4 p-2 rounded-md">
+                   <div className="flex-shrink-0">
+                        {f.status === 'pending' && <CircleCheck className="h-5 w-5 text-green-500" />}
+                        {f.status === 'uploading' && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
+                        {f.status === 'success' && <CircleCheck className="h-5 w-5 text-green-500" />}
+                        {f.status === 'failed' && <CircleX className="h-5 w-5 text-destructive" />}
+                   </div>
+                   <div className="flex-1 truncate">
+                        <p className="font-medium truncate">{f.file.name}</p>
+                        <p className="text-sm text-muted-foreground">{(f.file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                        {f.status === 'uploading' && <Progress value={f.progress} className="h-2 mt-1" />}
+                        {f.status === 'failed' && <p className="text-sm text-destructive">{f.error}</p>}
+                   </div>
+                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFileFromQueue(f.id)} disabled={f.status === 'uploading' || f.status === 'success'}>
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                   </Button>
+                </div>
+            ))}
+        </div>
+        <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialog(prev => ({...prev, isOpen: false}))} disabled={uploadInProgress}>
+                {allUploadsFinished ? 'Close' : 'Cancel'}
+            </Button>
+            <Button onClick={startUpload} disabled={!hasPendingFiles || uploadInProgress}>
+                {uploadInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                {uploadInProgress ? 'Uploading...' : `Start Upload`}
+            </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <div className="container mx-auto max-w-5xl px-4 md:px-6 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
         <div className="flex items-center">
@@ -360,7 +559,21 @@ export default function ProfileDashboardPage() {
        <Separator className="my-8" />
        
         <div>
-            <h2 className="text-3xl font-headline font-bold mb-6">Portfolio</h2>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-headline font-bold">Portfolio</h2>
+                <Button asChild variant="outline">
+                    <Label>
+                        <Upload className="mr-2 h-4 w-4" /> Edit Portfolio
+                         <Input 
+                            type="file" 
+                            className="hidden" 
+                            multiple 
+                            accept="image/*"
+                            onChange={e => handleFileSelect(e, 'portfolioImages', true)}
+                        />
+                    </Label>
+                </Button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {model.portfolioImages.map((src, index) => (
                 <Dialog key={index}>
@@ -389,6 +602,7 @@ export default function ProfileDashboardPage() {
             </div>
           </div>
     </div>
+    </>
   );
 }
 
@@ -482,3 +696,5 @@ function FormCheckbox({ name, label, description }: { name: string; label: strin
         />
     )
 }
+
+    
