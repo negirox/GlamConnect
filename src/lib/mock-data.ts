@@ -2,7 +2,10 @@
 export type Model = {
   id: string;
   name: string;
+  email: string;
   location: string;
+  locationPrefs?: string;
+  bio?: string;
   height: number; // in cm
   weight?: number; // in kg
   bust: number; // in cm
@@ -30,3 +33,5 @@ export type Model = {
 
 // This data is now read from public/models.csv
 export const models: Model[] = [];
+
+    

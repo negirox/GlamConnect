@@ -55,6 +55,7 @@ export default function LoginPage() {
             setIsLoading(false);
             // Simulate success and redirect
             router.push('/account/profile');
+            router.refresh(); // Force a refresh to fetch new user data
         }, 1000);
     }
 
@@ -123,3 +124,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

@@ -1,13 +1,15 @@
-//
+
 'use server';
 
 import fs from 'fs';
 import path from 'path';
 import type {Model} from './mock-data';
+import { revalidatePath } from 'next/cache';
 
 // Helper function to parse CSV data
 function parseCSV(csv: string): Model[] {
   const lines = csv.trim().split('\n');
+  if (lines.length < 2) return [];
   const headers = lines[0]
     .split(',')
     .map(h => h.trim());
@@ -55,6 +57,7 @@ const csvFilePath = path.join(process.cwd(), 'public', 'models.csv');
 export async function getModels(): Promise<Model[]> {
   try {
     const csvData = fs.readFileSync(csvFilePath, 'utf-8');
+    revalidatePath('/', 'layout');
     return parseCSV(csvData);
   } catch (error) {
     console.error('Error reading or parsing models.csv:', error);
@@ -64,5 +67,13 @@ export async function getModels(): Promise<Model[]> {
 
 export async function getModelById(id: string): Promise<Model | undefined> {
   const models = await getModels();
+  revalidatePath(`/profile/${id}`);
   return models.find(model => model.id === id);
 }
+
+export async function getModelByEmail(email: string): Promise<Model | undefined> {
+    const models = await getModels();
+    return models.find(model => model.email === email);
+}
+
+    
