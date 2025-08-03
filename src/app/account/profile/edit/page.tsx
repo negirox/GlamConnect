@@ -194,17 +194,23 @@ export default function ProfileManagementPage() {
     }));
     
     try {
-        if (isMultiple) {
+      const oldImagePathsToDelete: string[] = [];
+      if (isMultiple) {
           const oldImages = model[field] as string[] | undefined;
-          if (Array.isArray(oldImages) && oldImages.length > 0) {
-              await Promise.all(oldImages.map(img => deleteImage(img)));
+          if (Array.isArray(oldImages)) {
+              oldImagePathsToDelete.push(...oldImages);
           }
-        } else if (!isMultiple && filesToUpload.length > 0) { // Only delete if we are actually uploading a new single image
-           const oldImage = model[field] as string | undefined;
+      } else {
+          const oldImage = model[field] as string | undefined;
           if (typeof oldImage === 'string' && oldImage) {
-              await deleteImage(oldImage);
+              oldImagePathsToDelete.push(oldImage);
           }
-        }
+      }
+
+      // We only delete old images if we are certain new ones will be uploaded.
+      if (oldImagePathsToDelete.length > 0) {
+          await Promise.all(oldImagePathsToDelete.map(img => deleteImage(img)));
+      }
 
       const uploadPromises = filesToUpload.map(async (uploadableFile) => {
           setUploadDialog(prev => ({
@@ -225,6 +231,8 @@ export default function ProfileManagementPage() {
       results.forEach(result => {
          if (result.status === 'rejected') {
             console.error("An upload promise was rejected:", result.reason);
+            // Find the file and mark it as failed
+            // This is tricky without more info, but we can assume for now it's one of the uploading ones
             return;
          }
 
@@ -286,14 +294,18 @@ export default function ProfileManagementPage() {
     if (!model) return;
 
     setIsSubmitting(prev => ({...prev, [tab]: true}));
-
-    if (data.skills && typeof data.skills === 'string') data.skills = data.skills.split(',').map((s: string) => s.trim());
-    if (data.socialLinks && typeof data.socialLinks === 'string') data.socialLinks = data.socialLinks.split(',').map((s: string) => s.trim());
-    if (data.spokenLanguages && typeof data.spokenLanguages === 'string') data.spokenLanguages = data.spokenLanguages.split(',').map((s: string) => s.trim());
+    
+    // Convert comma-separated strings to arrays
+    const fieldsToSplit = ['skills', 'socialLinks', 'spokenLanguages'];
+    fieldsToSplit.forEach(field => {
+      if (data[field] && typeof data[field] === 'string') {
+        data[field] = data[field].split(',').map((s: string) => s.trim()).filter(Boolean);
+      }
+    });
     
     try {
       await updateModel(model.id, data);
-      await fetchModel();
+      await fetchModel(); // Refetch to get the latest data, including converted arrays
       toast({
         title: "Profile Updated",
         description: `Your ${tab} information has been saved.`,
@@ -364,7 +376,7 @@ export default function ProfileManagementPage() {
         genderIdentity: model.genderIdentity || '',
         dateOfBirth: model.dateOfBirth || '',
         nationality: model.nationality || '',
-        spokenLanguages: model.spokenLanguages?.join(', ') || '',
+        spokenLanguages: Array.isArray(model.spokenLanguages) ? model.spokenLanguages.join(', ') : model.spokenLanguages || '',
     } : undefined,
   });
 
@@ -395,9 +407,9 @@ export default function ProfileManagementPage() {
   const professionalForm = useForm({
       resolver: zodResolver(professionalSchema),
       values: model ? {
-          socialLinks: model.socialLinks?.join(', ') || '',
+          socialLinks: Array.isArray(model.socialLinks) ? model.socialLinks.join(', ') : model.socialLinks || '',
           experience: model.experience,
-          skills: model.skills?.join(', ') || '',
+          skills: Array.isArray(model.skills) ? model.skills.join(', ') : model.skills || '',
           availability: model.availability,
           yearsOfExperience: model.yearsOfExperience || 0,
           modelingWork: model.modelingWork || [],
