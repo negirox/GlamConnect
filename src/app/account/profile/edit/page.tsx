@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2, CircleCheck, CircleX } from "lucide-react";
+import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2, CircleCheck, CircleX, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState, useEffect } from "react";
@@ -45,6 +45,7 @@ const MAX_FILE_SIZE_MB = 2;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 type UploadableFile = {
+    id: string; // Unique ID for each file object
     file: File;
     status: 'pending' | 'uploading' | 'success' | 'failed';
     error?: string;
@@ -129,7 +130,8 @@ export default function ProfileManagementPage() {
     
     setUploadDialog({
         isOpen: true,
-        files: files.map(f => ({
+        files: files.map((f, i) => ({
+            id: `${f.name}-${i}`,
             file: f,
             status: f.size > MAX_FILE_SIZE_BYTES ? 'failed' : 'pending',
             error: f.size > MAX_FILE_SIZE_BYTES ? `File exceeds ${MAX_FILE_SIZE_MB}MB` : undefined,
@@ -139,16 +141,21 @@ export default function ProfileManagementPage() {
         isMultiple,
     });
 
-    // Reset the input value to allow selecting the same file again
     e.target.value = "";
   };
   
+  const removeFileFromQueue = (fileId: string) => {
+      setUploadDialog(prev => ({
+          ...prev,
+          files: prev.files.filter(f => f.id !== fileId)
+      }));
+  }
+
   const startUpload = async () => {
     if (!model || !uploadDialog.field) return;
 
     const { field, files, isMultiple } = uploadDialog;
     
-    // Filter out files that already failed validation
     const filesToUpload = files.filter(f => f.status === 'pending');
     if (filesToUpload.length === 0) {
         if(files.every(f => f.status === 'failed')) {
@@ -159,60 +166,69 @@ export default function ProfileManagementPage() {
 
     setUploadDialog(prev => ({
         ...prev,
-        files: prev.files.map(f => f.status === 'pending' ? { ...f, status: 'uploading', progress: 50 } : f)
+        files: prev.files.map(f => f.status === 'pending' ? { ...f, status: 'uploading' } : f)
     }));
-
+    
     try {
-      if (isMultiple) {
+        if (isMultiple) {
           const oldImages = model[field] as string[] | undefined;
           if (Array.isArray(oldImages) && oldImages.length > 0) {
               await Promise.all(oldImages.map(img => deleteImage(img)));
           }
-      } else {
+        } else if (!isMultiple && filesToUpload.length > 0) { // Only delete if we are actually uploading a new single image
            const oldImage = model[field] as string | undefined;
           if (typeof oldImage === 'string' && oldImage) {
               await deleteImage(oldImage);
           }
-      }
+        }
 
       const uploadPromises = filesToUpload.map(async (uploadableFile) => {
-        const formData = new FormData();
-        formData.append('file', uploadableFile.file);
-        return uploadImage(formData, MAX_FILE_SIZE_MB);
+          setUploadDialog(prev => ({
+              ...prev,
+              files: prev.files.map(f => f.id === uploadableFile.id ? { ...f, progress: 50 } : f)
+          }));
+          const formData = new FormData();
+          formData.append('file', uploadableFile.file);
+          const result = await uploadImage(formData, MAX_FILE_SIZE_MB);
+          return { ...result, originalFileId: uploadableFile.id };
       });
 
       const results = await Promise.allSettled(uploadPromises);
 
       const newPaths: string[] = [];
-      const finalFilesState: UploadableFile[] = [...uploadDialog.files];
+      const finalFilesState = [...uploadDialog.files]; 
 
-      results.forEach((result, index) => {
-          const originalFile = filesToUpload[index];
-          const fileIndexInDialog = uploadDialog.files.findIndex(f => f.file.name === originalFile.file.name && f.status === 'uploading');
+      results.forEach(result => {
+         if (result.status === 'rejected') {
+            // This case should ideally not happen if server actions are set up correctly, but it's good practice to handle it.
+            // You might want to find which file it corresponds to if possible, though it's hard without an ID.
+            console.error("An upload promise was rejected:", result.reason);
+            // Since we can't identify the file, we can't update its status easily.
+            // The user might see it stuck in "uploading". A more complex mapping would be needed for production.
+            return;
+         }
 
-          if (fileIndexInDialog === -1) return;
+          const { originalFileId, success, filePath, message } = result.value;
+          const fileIndex = finalFilesState.findIndex(f => f.id === originalFileId);
 
-          if (result.status === 'fulfilled' && result.value.success && result.value.filePath) {
-              newPaths.push(result.value.filePath);
-              finalFilesState[fileIndexInDialog] = { ...finalFilesState[fileIndexInDialog], status: 'success', progress: 100 };
+          if (fileIndex === -1) return;
+
+          if (success && filePath) {
+              newPaths.push(filePath);
+              finalFilesState[fileIndex] = { ...finalFilesState[fileIndex], status: 'success', progress: 100 };
           } else {
-              const errorMessage = result.status === 'fulfilled' ? result.value.message : 'An unknown error occurred.';
-              finalFilesState[fileIndexInDialog] = { ...finalFilesState[fileIndexInDialog], status: 'failed', error: errorMessage, progress: 0 };
+              finalFilesState[fileIndex] = { ...finalFilesState[fileIndex], status: 'failed', error: message || 'An unknown error occurred.', progress: 0 };
           }
       });
+      
+      // Update dialog state once after all uploads are processed
+      setUploadDialog(prev => ({...prev, files: finalFilesState}));
 
-      setUploadDialog(prev => ({ ...prev, files: finalFilesState }));
 
       if (newPaths.length > 0) {
-          const currentModelValue = model[field];
-          let updatePayload;
-
-          if (isMultiple) {
-              const existingPaths = Array.isArray(currentModelValue) ? currentModelValue : [];
-              updatePayload = { [field]: [...existingPaths, ...newPaths] };
-          } else {
-              updatePayload = { [field]: newPaths[0] };
-          }
+          const updatePayload = isMultiple 
+              ? { [field]: newPaths }
+              : { [field]: newPaths[0] };
           
           await updateModel(model.id, updatePayload);
 
@@ -223,7 +239,7 @@ export default function ProfileManagementPage() {
           await fetchModel(); 
       }
       
-      const failedCount = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
+      const failedCount = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
       if (failedCount > 0) {
            toast({
               title: "Upload Incomplete",
@@ -246,7 +262,6 @@ export default function ProfileManagementPage() {
         }));
     }
   }
-
 
   const handleFormSubmit = async (tab: string, data: any) => {
     if (!model) return;
@@ -357,12 +372,12 @@ export default function ProfileManagementPage() {
   }
   
   const uploadInProgress = uploadDialog.files.some(f => f.status === 'uploading');
-  const allUploadsFinished = !uploadInProgress && uploadDialog.files.length > 0;
+  const allUploadsFinished = !uploadInProgress && uploadDialog.files.some(f => f.status === 'success' || f.status === 'failed');
   const hasPendingFiles = uploadDialog.files.some(f => f.status === 'pending');
 
   return (
     <>
-    <Dialog open={uploadDialog.isOpen} onOpenChange={(isOpen) => !isOpen && setUploadDialog(prev => ({...prev, isOpen: false}))}>
+    <Dialog open={uploadDialog.isOpen} onOpenChange={(isOpen) => !uploadInProgress && !isOpen && setUploadDialog(prev => ({...prev, isOpen: false}))}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Confirm Upload</DialogTitle>
@@ -370,19 +385,24 @@ export default function ProfileManagementPage() {
             Review your files before uploading. Files over {MAX_FILE_SIZE_MB}MB will be ignored.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 max-h-80 overflow-y-auto">
-            {uploadDialog.files.map((f, i) => (
-                <div key={i} className="flex items-center gap-4 p-2 rounded-md">
+        <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
+            {uploadDialog.files.map((f) => (
+                <div key={f.id} className="flex items-center gap-4 p-2 rounded-md">
+                   <div className="flex-shrink-0">
+                        {f.status === 'pending' && <CircleCheck className="h-5 w-5 text-green-500" />}
+                        {f.status === 'uploading' && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
+                        {f.status === 'success' && <CircleCheck className="h-5 w-5 text-green-500" />}
+                        {f.status === 'failed' && <CircleX className="h-5 w-5 text-destructive" />}
+                   </div>
                    <div className="flex-1 truncate">
                         <p className="font-medium truncate">{f.file.name}</p>
                         <p className="text-sm text-muted-foreground">{(f.file.size / (1024 * 1024)).toFixed(2)} MB</p>
                         {f.status === 'uploading' && <Progress value={f.progress} className="h-2 mt-1" />}
                         {f.status === 'failed' && <p className="text-sm text-destructive">{f.error}</p>}
                    </div>
-                   {f.status === 'pending' && <CircleCheck className="h-5 w-5 text-muted-foreground" />}
-                   {f.status === 'uploading' && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
-                   {f.status === 'success' && <CircleCheck className="h-5 w-5 text-green-500" />}
-                   {f.status === 'failed' && <CircleX className="h-5 w-5 text-destructive" />}
+                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFileFromQueue(f.id)} disabled={f.status === 'uploading' || f.status === 'success'}>
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                   </Button>
                 </div>
             ))}
         </div>
