@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent,  SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Full Name is required'),
@@ -434,7 +436,7 @@ function FormCheckbox({ name, label, description }: { name: string; label: strin
             control={control}
             render={({ field }) => (
                 <div className="flex items-start space-x-3">
-                    <Checkbox id={name} checked={field.value} onCheckedChange={field.onChange} className="mt-1" />
+                    <Checkbox id={name} checked={field.value as boolean} onCheckedChange={field.onChange} className="mt-1" />
                     <div className="grid gap-1.5 leading-none">
                         <Label htmlFor={name} className="font-semibold">{label}</Label>
                         <p className="text-sm text-muted-foreground">{description}</p>
@@ -444,3 +446,5 @@ function FormCheckbox({ name, label, description }: { name: string; label: strin
         />
     )
 }
+
+    
