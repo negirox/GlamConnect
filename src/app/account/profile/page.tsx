@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { getModelByEmail } from '@/lib/data-actions';
 import type { Model } from '@/lib/mock-data';
-import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag, Loader2, Link as LinkIcon } from 'lucide-react';
+import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag, Loader2, Link as LinkIcon, AlertCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
@@ -205,6 +205,19 @@ export default function ProfileDashboardPage() {
     }
   };
 
+  const getVerificationBadge = () => {
+    switch(model.verificationStatus) {
+        case 'Verified':
+            return <BadgeCheck className="h-7 w-7 text-blue-500" title="Verified"/>;
+        case 'Pending':
+            return <Clock className="h-6 w-6 text-orange-500" title="Pending Verification"/>;
+        case 'Not Verified':
+            return <AlertCircle className="h-6 w-6 text-muted-foreground" title="Not Verified"/>
+        default:
+            return null;
+    }
+  }
+
 
   function FormDialog({ dialogKey }: { dialogKey: string }) {
     const { schema, fields, title } = forms[dialogKey];
@@ -262,7 +275,7 @@ export default function ProfileDashboardPage() {
           <div>
             <div className="flex items-center gap-2">
                 <h1 className="text-4xl font-headline font-bold">{model.name}</h1>
-                <BadgeCheck className="h-7 w-7 text-blue-500" />
+                {getVerificationBadge()}
             </div>
             <div className="flex items-center text-muted-foreground mt-2">
                 <MapPin className="h-4 w-4 mr-1.5" />

@@ -91,7 +91,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center">
                 <h1 className="text-3xl font-headline font-bold">{model.name}</h1>
-                <BadgeCheck className="ml-2 h-6 w-6 text-blue-500" />
+                {model.verificationStatus === 'Verified' && <BadgeCheck className="ml-2 h-6 w-6 text-blue-500" />}
               </div>
               <div className="flex items-center justify-center text-muted-foreground mt-2">
                 <MapPin className="h-4 w-4 mr-1.5" />

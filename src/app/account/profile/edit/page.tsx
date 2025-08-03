@@ -313,6 +313,27 @@ export default function ProfileManagementPage() {
     }
   }
 
+    const handleVerificationRequest = async () => {
+        if (!model) return;
+        setIsSubmitting(prev => ({...prev, verification: true}));
+        try {
+            await updateModel(model.id, { verificationStatus: 'Pending' });
+            await fetchModel();
+            toast({
+                title: "Request Sent",
+                description: "Your verification request has been submitted to the admin.",
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to send verification request.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmitting(prev => ({...prev, verification: false}));
+        }
+    }
+
   const basicInfoForm = useForm({
     resolver: zodResolver(profileSchema),
     values: model ? { 
@@ -697,8 +718,14 @@ export default function ProfileManagementPage() {
                         <CheckCircle className="h-5 w-5 text-green-500" />
                         <div className="space-y-1">
                             <p className="font-semibold">Verification Badge</p>
-                            <p className="text-sm text-muted-foreground">Request a manual verification to get a badge on your profile. This increases trust with brands.</p>
-                            <Button variant="outline" size="sm" className="mt-2">Request Verification</Button>
+                            <p className="text-sm text-muted-foreground">
+                                Your profile is currently <span className="font-bold">{model.verificationStatus}</span>. 
+                                Submit your profile for manual review to get a verified badge. This increases trust with brands.
+                            </p>
+                            <Button variant="outline" size="sm" className="mt-2" onClick={handleVerificationRequest} disabled={model.verificationStatus === 'Pending' || model.verificationStatus === 'Verified' || isSubmitting.verification}>
+                               {isSubmitting.verification && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                {model.verificationStatus === 'Pending' ? 'Request Pending' : model.verificationStatus === 'Verified' ? 'Verified' : 'Request Verification'}
+                            </Button>
                         </div>
                     </div>
                 </CardContent>

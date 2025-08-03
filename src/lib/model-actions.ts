@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 
 const csvFilePath = path.join(process.cwd(), 'public', 'models.csv');
 
-const ALL_MODEL_HEADERS = ['id', 'name', 'email', 'location', 'locationPrefs', 'bio', 'height', 'weight', 'bust', 'waist', 'hips', 'shoeSize', 'eyeColor', 'hairColor', 'ethnicity', 'tattoos', 'piercings', 'experience', 'availability', 'portfolioImages', 'profilePicture', 'skills', 'socialLinks', 'consentBikini', 'consentSemiNude', 'consentNude', 'bikiniPortfolioImages', 'semiNudePortfolioImages', 'nudePortfolioImages'];
+const ALL_MODEL_HEADERS = ['id', 'name', 'email', 'location', 'locationPrefs', 'bio', 'height', 'weight', 'bust', 'waist', 'hips', 'shoeSize', 'eyeColor', 'hairColor', 'ethnicity', 'tattoos', 'piercings', 'experience', 'availability', 'portfolioImages', 'profilePicture', 'skills', 'socialLinks', 'consentBikini', 'consentSemiNude', 'consentNude', 'bikiniPortfolioImages', 'semiNudePortfolioImages', 'nudePortfolioImages', 'verificationStatus'];
 
 // Helper to read and parse the CSV
 function readModels(): { headers: string[], models: Model[] } {
@@ -115,6 +115,7 @@ export async function createModelForUser(modelData: Partial<Model>) {
         bikiniPortfolioImages: [],
         semiNudePortfolioImages: [],
         nudePortfolioImages: [],
+        verificationStatus: 'Not Verified',
     };
     
     models.push(defaultModel);

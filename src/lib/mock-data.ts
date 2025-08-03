@@ -29,6 +29,7 @@ export type Model = {
   bikiniPortfolioImages?: string[];
   semiNudePortfolioImages?: string[];
   nudePortfolioImages?: string[];
+  verificationStatus: 'Not Verified' | 'Pending' | 'Verified';
 };
 
 // This data is now read from public/models.csv
