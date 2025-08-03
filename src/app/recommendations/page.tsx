@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { ModelCard } from '@/components/model-card';
-import { getModels } from '@/lib/data-service';
+import { getModels } from '@/lib/data-actions';
 import { Model } from '@/lib/mock-data';
 
 const recommendationSchema = z.object({

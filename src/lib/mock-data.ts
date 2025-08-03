@@ -1,187 +1,26 @@
+
 export type Model = {
   id: string;
   name: string;
   location: string;
   height: number; // in cm
+  weight?: number; // in kg
   bust: number; // in cm
   waist: number; // in cm
   hips: number; // in cm
   shoeSize: number; // EU
   eyeColor: string;
   hairColor: string;
+  ethnicity?: string;
+  tattoos?: boolean;
+  piercings?: boolean;
   experience: 'New Face' | 'Experienced' | 'Expert';
   availability: 'Full-time' | 'Part-time' | 'By Project';
   portfolioImages: string[];
   profilePicture: string;
+  skills?: string; // Comma-separated
+  socialLinks?: string; // Comma-separated
 };
 
-export const models: Model[] = [
-  {
-    id: '1',
-    name: 'Anastasia Petrova',
-    location: 'Paris, France',
-    height: 178,
-    bust: 82,
-    waist: 60,
-    hips: 89,
-    shoeSize: 39,
-    eyeColor: 'Blue',
-    hairColor: 'Blonde',
-    experience: 'Experienced',
-    availability: 'Full-time',
-    profilePicture: 'https://placehold.co/400x600/E6E6FA/000000',
-    portfolioImages: [
-      'https://placehold.co/600x800/D8BFD8/000000',
-      'https://placehold.co/600x800/F0F0F0/000000',
-      'https://placehold.co/800x600/E6E6FA/000000',
-      'https://placehold.co/600x800/FFFFFF/000000',
-    ],
-  },
-  {
-    id: '2',
-    name: 'Kenji Tanaka',
-    location: 'Tokyo, Japan',
-    height: 185,
-    bust: 95,
-    waist: 78,
-    hips: 94,
-    shoeSize: 44,
-    eyeColor: 'Brown',
-    hairColor: 'Black',
-    experience: 'Expert',
-    availability: 'By Project',
-    profilePicture: 'https://placehold.co/400x600/D8BFD8/000000',
-    portfolioImages: [
-      'https://placehold.co/600x800/E6E6FA/000000',
-      'https://placehold.co/600x800/F0F0F0/000000',
-      'https://placehold.co/800x600/D8BFD8/000000',
-      'https://placehold.co/600x800/000000/FFFFFF',
-    ],
-  },
-  {
-    id: '3',
-    name: 'Sofia Rossi',
-    location: 'Milan, Italy',
-    height: 175,
-    bust: 85,
-    waist: 62,
-    hips: 90,
-    shoeSize: 38,
-    eyeColor: 'Green',
-    hairColor: 'Brown',
-    experience: 'Experienced',
-    availability: 'Part-time',
-    profilePicture: 'https://placehold.co/400x600/F0F0F0/000000',
-    portfolioImages: [
-      'https://placehold.co/600x800/E6E6FA/000000',
-      'https://placehold.co/600x800/D8BFD8/000000',
-      'https://placehold.co/800x600/F0F0F0/000000',
-      'https://placehold.co/600x800/663399/FFFFFF',
-    ],
-  },
-  {
-    id: '4',
-    name: 'Chloe Dubois',
-    location: 'New York, USA',
-    height: 179,
-    bust: 88,
-    waist: 64,
-    hips: 92,
-    shoeSize: 40,
-    eyeColor: 'Hazel',
-    hairColor: 'Red',
-    experience: 'Expert',
-    availability: 'Full-time',
-    profilePicture: 'https://placehold.co/400x600/E6E6FA/000000',
-    portfolioImages: [
-      'https://placehold.co/600x800/F0F0F0/000000',
-      'https://placehold.co/600x800/D8BFD8/000000',
-      'https://placehold.co/800x600/E6E6FA/000000',
-      'https://placehold.co/600x800/FFFFFF/000000',
-    ],
-  },
-  {
-    id: '5',
-    name: 'Liam O-Connell',
-    location: 'London, UK',
-    height: 188,
-    bust: 98,
-    waist: 80,
-    hips: 96,
-    shoeSize: 45,
-    eyeColor: 'Blue',
-    hairColor: 'Brown',
-    experience: 'New Face',
-    availability: 'Full-time',
-    profilePicture: 'https://placehold.co/400x600/D8BFD8/000000',
-    portfolioImages: [
-      'https://placehold.co/600x800/E6E6FA/000000',
-      'https://placehold.co/600x800/F0F0F0/000000',
-      'https://placehold.co/800x600/D8BFD8/000000',
-      'https://placehold.co/600x800/000000/FFFFFF',
-    ],
-  },
-  {
-    id: '6',
-    name: 'Amara Nwabueze',
-    location: 'Lagos, Nigeria',
-    height: 180,
-    bust: 84,
-    waist: 61,
-    hips: 91,
-    shoeSize: 40,
-    eyeColor: 'Brown',
-    hairColor: 'Black',
-    experience: 'Experienced',
-    availability: 'By Project',
-    profilePicture: 'https://placehold.co/400x600/F0F0F0/000000',
-    portfolioImages: [
-      'https://placehold.co/600x800/E6E6FA/000000',
-      'https://placehold.co/600x800/D8BFD8/000000',
-      'https://placehold.co/800x600/F0F0F0/000000',
-      'https://placehold.co/600x800/663399/FFFFFF',
-    ],
-  },
-  {
-    id: '7',
-    name: 'Isabella Costa',
-    location: 'São Paulo, Brazil',
-    height: 176,
-    bust: 86,
-    waist: 63,
-    hips: 93,
-    shoeSize: 39,
-    eyeColor: 'Brown',
-    hairColor: 'Brunette',
-    experience: 'New Face',
-    availability: 'Part-time',
-    profilePicture: 'https://placehold.co/400x600/E6E6FA/000000',
-    portfolioImages: [
-      'https://placehold.co/600x800/D8BFD8/000000',
-      'https://placehold.co/600x800/F0F0F0/000000',
-      'https://placehold.co/800x600/E6E6FA/000000',
-      'https://placehold.co/600x800/FFFFFF/000000',
-    ],
-  },
-  {
-    id: '8',
-    name: 'Aiden Kim',
-    location: 'Seoul, South Korea',
-    height: 183,
-    bust: 92,
-    waist: 76,
-    hips: 91,
-    shoeSize: 43,
-    eyeColor: 'Dark Brown',
-    hairColor: 'Black',
-    experience: 'Experienced',
-    availability: 'Full-time',
-    profilePicture: 'https://placehold.co/400x600/D8BFD8/000000',
-    portfolioImages: [
-      'https://placehold.co/600x800/E6E6FA/000000',
-      'https://placehold.co/600x800/F0F0F0/000000',
-      'https://placehold.co/800x600/D8BFD8/000000',
-      'https://placehold.co/600x800/000000/FFFFFF',
-    ],
-  },
-];
+// This data is now read from public/models.csv
+export const models: Model[] = [];

@@ -5,7 +5,7 @@ import { ModelCard } from '@/components/model-card';
 import { SearchFilters } from '@/components/search-filters';
 import { Model } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
-import { getModels } from '@/lib/data-service';
+import { getModels } from '@/lib/data-actions';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SearchPage() {

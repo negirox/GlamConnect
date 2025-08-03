@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ModelCard } from '@/components/model-card';
-import { getModels } from '@/lib/data-service';
+import { getModels } from '@/lib/data-actions';
 import { ArrowRight } from 'lucide-react';
 
 export default async function Home() {
