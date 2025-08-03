@@ -83,7 +83,6 @@ export default function ProfileManagementPage() {
       const fetchedModel = await getModelByEmail(DUMMY_USER_EMAIL);
       if (fetchedModel) {
         setModel(fetchedModel);
-        // Initialize consent states from fetched model data
         setConsentBikini(fetchedModel.consentBikini || false);
         setConsentSemiNude(fetchedModel.consentSemiNude || false);
         setConsentNude(fetchedModel.consentNude || false);
@@ -99,7 +98,6 @@ export default function ProfileManagementPage() {
 
     setIsSubmitting(prev => ({...prev, [tab]: true}));
 
-    // Special handling for array-like fields
     if (data.skills) data.skills = data.skills.split(',').map((s: string) => s.trim());
     if (data.socialLinks) data.socialLinks = data.socialLinks.split(',').map((s: string) => s.trim());
 
@@ -109,7 +107,6 @@ export default function ProfileManagementPage() {
         title: "Profile Updated",
         description: `Your ${tab} information has been saved.`,
       });
-       // Re-fetch model data to update UI
       const fetchedModel = await getModelByEmail(DUMMY_USER_EMAIL);
       if (fetchedModel) setModel(fetchedModel);
 
@@ -189,7 +186,17 @@ export default function ProfileManagementPage() {
   }
 
   if (!model) {
-    return <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">Model data not found for this user. Please complete your profile.</div>
+    return (
+        <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12 text-center">
+            <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Profile Not Found</AlertTitle>
+                <AlertDescription>
+                   Model data not found for this user. Please complete your profile, or if you just signed up, log out and log back in.
+                </AlertDescription>
+            </Alert>
+        </div>
+    )
   }
 
   return (
@@ -395,7 +402,6 @@ export default function ProfileManagementPage() {
                     {model.portfolioImages.map((img, i) => (
                          <div key={i} className="relative aspect-square">
                             <img src={img} alt="portfolio image" data-ai-hint="fashion model" className="rounded-md object-cover w-full h-full"/>
-                            {/* <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">Editorial</div> */}
                          </div>
                     ))}
                 </div>
@@ -595,5 +601,3 @@ export default function ProfileManagementPage() {
     </div>
   );
 }
-
-    

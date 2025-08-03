@@ -12,9 +12,12 @@ const csvFilePath = path.join(process.cwd(), 'public', 'models.csv');
 function readModels(): { headers: string[], models: Model[] } {
   const csvData = fs.readFileSync(csvFilePath, 'utf-8');
   const lines = csvData.trim().split('\n');
-  if (lines.length < 2) return { headers: [], models: [] };
+  if (lines.length < 1) return { headers: [], models: [] };
 
   const headers = lines[0].split(',').map(h => h.trim());
+   if (headers.length === 0 || headers[0] === '' || lines.length === 1) {
+      return { headers: headers.length > 0 && headers[0] !== '' ? headers : ['id', 'name', 'email', 'location', 'locationPrefs', 'bio', 'height', 'weight', 'bust', 'waist', 'hips', 'shoeSize', 'eyeColor', 'hairColor', 'ethnicity', 'tattoos', 'piercings', 'experience', 'availability', 'portfolioImages', 'profilePicture', 'skills', 'socialLinks', 'consentBikini', 'consentSemiNude', 'consentNude', 'bikiniPortfolioImages', 'semiNudePortfolioImages', 'nudePortfolioImages'], models: [] };
+  }
   
   const models = lines.slice(1).map(line => {
     const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
@@ -54,11 +57,11 @@ function writeModels(headers: string[], models: Model[]) {
             if (value === null || value === undefined) {
                 return '';
             }
-            return value;
+            return String(value);
         }).join(',');
     });
 
-    const csvString = [headerString, ...rows].join('\n');
+    const csvString = [headerString, ...rows].join('\n') + '\n';
     fs.writeFileSync(csvFilePath, csvString, 'utf-8');
 }
 
@@ -71,7 +74,6 @@ export async function createModelForUser(modelData: Partial<Model>) {
 
     const existingModel = models.find(m => m.email === modelData.email);
     if (existingModel) {
-        // Model profile already exists, which is fine.
         return { success: true, message: 'Model profile already exists.' };
     }
 
@@ -95,7 +97,7 @@ export async function createModelForUser(modelData: Partial<Model>) {
         piercings: false,
         experience: 'New Face',
         availability: 'By Project',
-        portfolioImages: [],
+        portfolioImages: ['https://placehold.co/600x800.png'],
         profilePicture: 'https://placehold.co/600x800.png',
         skills: [],
         socialLinks: [],
@@ -124,13 +126,11 @@ export async function updateModel(id: string, updatedData: Partial<Model>) {
             throw new Error('Model not found');
         }
 
-        // Merge the updated data
         const updatedModel = { ...models[modelIndex], ...updatedData };
         models[modelIndex] = updatedModel;
         
         writeModels(headers, models);
 
-        // Revalidate paths to reflect changes
         revalidatePath('/account/profile');
         revalidatePath(`/profile/${id}`);
 
