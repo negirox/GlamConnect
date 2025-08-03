@@ -151,21 +151,18 @@ export default function ProfileManagementPage() {
     // Filter out files that already failed validation
     const filesToUpload = files.filter(f => f.status === 'pending');
     if (filesToUpload.length === 0) {
-        // If all files are invalid, maybe update state to show all failed and then user can close.
         if(files.every(f => f.status === 'failed')) {
            toast({ title: "Upload Error", description: "All selected files are invalid.", variant: "destructive" });
         }
         return;
     }
 
-    // Set status to 'uploading' for pending files
     setUploadDialog(prev => ({
         ...prev,
         files: prev.files.map(f => f.status === 'pending' ? { ...f, status: 'uploading', progress: 50 } : f)
     }));
 
     try {
-      // 1. Delete old images first
       if (isMultiple) {
           const oldImages = model[field] as string[] | undefined;
           if (Array.isArray(oldImages) && oldImages.length > 0) {
@@ -178,16 +175,10 @@ export default function ProfileManagementPage() {
           }
       }
 
-      // 2. Upload new images
       const uploadPromises = filesToUpload.map(async (uploadableFile) => {
         const formData = new FormData();
         formData.append('file', uploadableFile.file);
-        const result = await uploadImage(formData, MAX_FILE_SIZE_MB);
-        
-        return {
-          ...result,
-          originalName: uploadableFile.file.name,
-        };
+        return uploadImage(formData, MAX_FILE_SIZE_MB);
       });
 
       const results = await Promise.allSettled(uploadPromises);
@@ -197,7 +188,9 @@ export default function ProfileManagementPage() {
 
       results.forEach((result, index) => {
           const originalFile = filesToUpload[index];
-          const fileIndexInDialog = uploadDialog.files.findIndex(f => f.file.name === originalFile.file.name);
+          const fileIndexInDialog = uploadDialog.files.findIndex(f => f.file.name === originalFile.file.name && f.status === 'uploading');
+
+          if (fileIndexInDialog === -1) return;
 
           if (result.status === 'fulfilled' && result.value.success && result.value.filePath) {
               newPaths.push(result.value.filePath);
@@ -210,22 +203,35 @@ export default function ProfileManagementPage() {
 
       setUploadDialog(prev => ({ ...prev, files: finalFilesState }));
 
-      // 3. Update model with new paths if any succeeded
       if (newPaths.length > 0) {
-          const updatePayload = isMultiple ? { [field]: newPaths } : { [field]: newPaths[0] };
+          const currentModelValue = model[field];
+          let updatePayload;
+
+          if (isMultiple) {
+              const existingPaths = Array.isArray(currentModelValue) ? currentModelValue : [];
+              updatePayload = { [field]: [...existingPaths, ...newPaths] };
+          } else {
+              updatePayload = { [field]: newPaths[0] };
+          }
+          
           await updateModel(model.id, updatePayload);
+
           toast({
               title: "Upload Complete",
               description: `${newPaths.length} image(s) uploaded successfully.`,
           });
-          await fetchModel(); // Refresh model data
-      } else {
+          await fetchModel(); 
+      }
+      
+      const failedCount = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
+      if (failedCount > 0) {
            toast({
-              title: "Upload Failed",
-              description: "No images were successfully uploaded.",
+              title: "Upload Incomplete",
+              description: `${failedCount} image(s) failed to upload.`,
               variant: 'destructive'
            });
       }
+
 
     } catch (error: any) {
         console.error("Upload process failed", error);
@@ -234,7 +240,6 @@ export default function ProfileManagementPage() {
             description: error.message || "An unexpected error occurred during the upload process.",
             variant: "destructive",
         });
-        // Mark all uploading files as failed
         setUploadDialog(prev => ({
             ...prev,
             files: prev.files.map(f => f.status === 'uploading' ? { ...f, status: 'failed', error: 'Process failed' } : f)
@@ -351,7 +356,9 @@ export default function ProfileManagementPage() {
     )
   }
   
-  const allUploadsFinished = uploadDialog.files.every(f => f.status === 'success' || f.status === 'failed');
+  const uploadInProgress = uploadDialog.files.some(f => f.status === 'uploading');
+  const allUploadsFinished = !uploadInProgress && uploadDialog.files.length > 0;
+  const hasPendingFiles = uploadDialog.files.some(f => f.status === 'pending');
 
   return (
     <>
@@ -372,7 +379,7 @@ export default function ProfileManagementPage() {
                         {f.status === 'uploading' && <Progress value={f.progress} className="h-2 mt-1" />}
                         {f.status === 'failed' && <p className="text-sm text-destructive">{f.error}</p>}
                    </div>
-                   {f.status === 'pending' && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+                   {f.status === 'pending' && <CircleCheck className="h-5 w-5 text-muted-foreground" />}
                    {f.status === 'uploading' && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
                    {f.status === 'success' && <CircleCheck className="h-5 w-5 text-green-500" />}
                    {f.status === 'failed' && <CircleX className="h-5 w-5 text-destructive" />}
@@ -380,12 +387,12 @@ export default function ProfileManagementPage() {
             ))}
         </div>
         <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadDialog(prev => ({...prev, isOpen: false}))} disabled={!allUploadsFinished}>
+            <Button variant="outline" onClick={() => setUploadDialog(prev => ({...prev, isOpen: false}))} disabled={uploadInProgress}>
                 {allUploadsFinished ? 'Close' : 'Cancel'}
             </Button>
-            <Button onClick={startUpload} disabled={uploadDialog.files.every(f => f.status !== 'pending') || !allUploadsFinished}>
-                <Upload className="mr-2 h-4 w-4" />
-                Start Upload
+            <Button onClick={startUpload} disabled={!hasPendingFiles || uploadInProgress}>
+                {uploadInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                {uploadInProgress ? 'Uploading...' : `Start Upload`}
             </Button>
         </DialogFooter>
       </DialogContent>
@@ -816,4 +823,3 @@ export default function ProfileManagementPage() {
     </>
   );
 }
-
