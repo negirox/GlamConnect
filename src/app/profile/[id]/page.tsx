@@ -14,7 +14,6 @@ import {
   MapPin,
   Eye,
   MessageSquare,
-  Instagram,
   Palette,
   Tag,
   Weight,
@@ -22,6 +21,13 @@ import {
   Link as LinkIcon,
   BadgeCheck,
   Loader2,
+  Hand,
+  Languages,
+  Venus,
+  Cake,
+  Flag,
+  Info,
+  Sigma,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -58,16 +64,16 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const attributes = [
     { icon: PersonStanding, label: 'Height', value: `${model.height} cm` },
     { icon: Weight, label: 'Weight', value: model.weight ? `${model.weight} kg` : 'N/A' },
-    {
-      icon: Ruler,
-      label: 'Measurements',
-      value: `${model.bust}-${model.waist}-${model.hips} cm`,
-    },
+    { icon: Ruler, label: 'Measurements', value: `${model.bust}-${model.waist}-${model.hips} cm` },
+    { icon: Sigma, label: 'Cup Size', value: model.cupSize || 'N/A' },
     { icon: Eye, label: 'Eyes', value: model.eyeColor },
     { icon: Palette, label: 'Hair', value: model.hairColor },
-    { icon: Briefcase, label: 'Experience', value: model.experience },
-    { icon: CalendarDays, label: 'Availability', value: model.availability },
+    { icon: Info, label: 'Dress Size', value: model.dressSize || 'N/A' },
     { icon: Tag, label: 'Ethnicity', value: model.ethnicity || 'N/A' },
+    { icon: Venus, label: 'Gender', value: model.genderIdentity || 'N/A' },
+    { icon: Cake, label: 'Born', value: model.dateOfBirth || 'N/A' },
+    { icon: Flag, label: 'Nationality', value: model.nationality || 'N/A' },
+    { icon: Languages, label: 'Languages', value: model.spokenLanguages?.join(', ') || 'N/A'},
   ];
   
   const socialLinks = model.socialLinks || [];
@@ -105,6 +111,13 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                       </a>
                     </Button>
                   ))}
+                   {model.portfolioLink && (
+                     <Button asChild variant="outline" size="icon">
+                      <a href={model.portfolioLink} target="_blank" rel="noopener noreferrer">
+                        <Briefcase className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  )}
               </div>
               <Button size="lg" className="w-full mt-6 bg-secondary hover:bg-accent">
                 <MessageSquare className="mr-2 h-4 w-4" />
@@ -132,14 +145,41 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 ))}
               </div>
               <Separator className="my-6" />
+                <div>
+                    <h3 className="font-semibold mb-3 flex items-center"><Briefcase className="mr-2 h-5 w-5 text-muted-foreground"/>Experience</h3>
+                    <div className="space-y-2 pl-7">
+                        <p><span className="font-semibold">Level:</span> {model.experience} ({model.yearsOfExperience || 0} years)</p>
+                        {model.agencyRepresented && <p><span className="font-semibold">Agency:</span> {model.agencyName}</p>}
+                        {model.previousClients && <p><span className="font-semibold">Previous Clients:</span> {model.previousClients}</p>}
+                    </div>
+                </div>
+               <Separator className="my-6" />
                <div>
-                  <h3 className="font-semibold mb-3 flex items-center"><Tag className="mr-2 h-5 w-5 text-muted-foreground"/>Skills</h3>
-                  <div className="flex flex-wrap gap-2">
-                  {model.skills && model.skills.map((skill, i) => (
-                    <Badge key={i} variant="secondary">{skill.trim()}</Badge>
-                  ))}
-                  </div>
+                  <h3 className="font-semibold mb-3 flex items-center"><Hand className="mr-2 h-5 w-5 text-muted-foreground"/>Modeling Work & Skills</h3>
+                   <div className="pl-7">
+                        <p className="font-semibold mb-2">Work Types:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {model.modelingWork && model.modelingWork.length > 0 ? model.modelingWork.map((work, i) => (
+                            <Badge key={i} variant="secondary">{work.trim()}</Badge>
+                          )) : <p className="text-sm text-muted-foreground">Not specified.</p>}
+                        </div>
+                        <p className="font-semibold mt-4 mb-2">Skills:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {model.skills && model.skills.length > 0 ? model.skills.map((skill, i) => (
+                            <Badge key={i} variant="secondary">{skill.trim()}</Badge>
+                          )): <p className="text-sm text-muted-foreground">Not specified.</p>}
+                        </div>
+                   </div>
               </div>
+                <Separator className="my-6" />
+                <div>
+                     <h3 className="font-semibold mb-3 flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-muted-foreground"/>Availability</h3>
+                     <div className="space-y-2 pl-7">
+                        <p><span className="font-semibold">Booking Status:</span> {model.availableForBookings ? "Available" : "Not Available"}</p>
+                        <p><span className="font-semibold">Travel:</span> {model.willingToTravel ? `Yes (${model.preferredRegions || 'Any'})` : 'No'}</p>
+                        <p><span className="font-semibold">Availability:</span> {model.availability} ({model.timeAvailability?.join(', ')})</p>
+                     </div>
+                </div>
             </CardContent>
           </Card>
 

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { getModelByEmail } from '@/lib/data-actions';
 import type { Model } from '@/lib/mock-data';
-import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag, Loader2, Link as LinkIcon, AlertCircle, Clock, Upload, CircleCheck, CircleX, Trash2 } from 'lucide-react';
+import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag, Loader2, Link as LinkIcon, AlertCircle, Clock, Upload, CircleCheck, CircleX, Trash2, Languages, Cake, Flag, Venus, Sigma, Hand, Info, PiggyBank } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
@@ -49,6 +49,7 @@ type UploadDialogState = {
     isMultiple: boolean;
 }
 
+// Schemas can be simplified for dashboard editing if needed, or share with edit page
 const profileSchema = z.object({
   name: z.string().min(1, 'Full Name is required'),
   bio: z.string().optional(),
@@ -214,7 +215,7 @@ export default function ProfileDashboardPage() {
       if (newPaths.length > 0) {
           const updatePayload = isMultiple 
               ? { [field]: newPaths }
-              : { [field]: newPaths[0] };
+              : { [field]: newPaths }; // Always use array for portfolio
           
           await updateModel(model.id, updatePayload);
 
@@ -234,7 +235,6 @@ export default function ProfileDashboardPage() {
            });
       }
 
-
     } catch (error: any) {
         console.error("Upload process failed", error);
         toast({
@@ -249,35 +249,6 @@ export default function ProfileDashboardPage() {
     }
   }
 
-  const handleFormSubmit = async (data: any, schema: any) => {
-    if (!model) return;
-    setIsSubmitting(true);
-    
-    if (data.skills && typeof data.skills === 'string') {
-      data.skills = data.skills.split(',').map((s: string) => s.trim());
-    }
-    if (data.socialLinks && typeof data.socialLinks === 'string') {
-      data.socialLinks = data.socialLinks.split(',').map((s: string) => s.trim());
-    }
-
-    try {
-      await updateModel(model.id, data);
-      await fetchModel(); 
-      toast({
-        title: "Profile Updated",
-        description: `Your information has been saved successfully.`,
-      });
-      setOpenDialog(null);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to update information.`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -304,62 +275,6 @@ export default function ProfileDashboardPage() {
     );
   }
 
-  const forms: { [key: string]: { schema: any; fields: JSX.Element; title: string } } = {
-    basic: {
-      schema: profileSchema,
-      title: 'Edit Basic Information',
-      fields: (
-        <>
-          <FormField name="name" label="Full Name" type="text" />
-          <FormField name="email" label="Email" type="email" />
-          <FormField name="location" label="Location" type="text" />
-          <FormField name="locationPrefs" label="Location Preferences" type="text" placeholder="e.g. Willing to travel" />
-          <FormField name="bio" label="Bio" type="textarea" />
-        </>
-      ),
-    },
-    attributes: {
-      schema: attributesSchema,
-      title: 'Edit Physical Attributes',
-      fields: (
-        <div className="grid grid-cols-2 gap-4">
-          <FormField name="height" label="Height (cm)" type="number" />
-          <FormField name="weight" label="Weight (kg)" type="number" />
-          <FormField name="bust" label="Bust (cm)" type="number" />
-          <FormField name="waist" label="Waist (cm)" type="number" />
-          <FormField name="hips" label="Hips (cm)" type="number" />
-          <FormField name="shoeSize" label="Shoe Size (EU)" type="number" />
-          <FormSelect name="eyeColor" label="Eye Color" options={['Blue', 'Green', 'Brown', 'Hazel', 'Grey', 'Amber']} />
-          <FormSelect name="hairColor" label="Hair Color" options={['Blonde', 'Brown', 'Black', 'Red', 'Grey', 'Other']} />
-          <FormField name="ethnicity" label="Ethnicity" type="text" />
-        </div>
-      ),
-    },
-    professional: {
-        schema: professionalSchema,
-        title: 'Edit Professional Details',
-        fields: (
-            <>
-                <FormSelect name="experience" label="Experience Level" options={['New Face', 'Experienced', 'Expert']} />
-                <FormRadioGroup name="availability" label="Availability" options={['Full-time', 'Part-time', 'By Project']} />
-                <FormField name="skills" label="Skills (comma-separated)" type="text" placeholder="e.g. Runway, Commercial" />
-                <FormField name="socialLinks" label="Social Links (comma-separated)" type="text" placeholder="e.g. https://instagram.com/..." />
-            </>
-        )
-    },
-    consent: {
-        schema: consentSchema,
-        title: 'Edit Consent Settings',
-        fields: (
-            <>
-                <FormCheckbox name="consentBikini" label="Bikini Shoots" description="I consent to be considered for shoots that require wearing swimwear or bikini." />
-                <FormCheckbox name="consentSemiNude" label="Semi-Nude Shoots" description="I consent to be considered for tasteful, artistic semi-nude shoots." />
-                <FormCheckbox name="consentNude" label="Nude Shoots" description="I consent to be considered for artistic nude shoots." />
-            </>
-        )
-    }
-  };
-
   const getVerificationBadge = () => {
     const statusMap = {
       'Verified': { icon: BadgeCheck, color: 'text-blue-500', text: 'Verified' },
@@ -381,46 +296,6 @@ export default function ProfileDashboardPage() {
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
-    );
-  }
-
-
-  function FormDialog({ dialogKey }: { dialogKey: string }) {
-    const { schema, fields, title } = forms[dialogKey];
-    
-    const defaultValues = Object.keys(schema.shape).reduce((acc, key) => {
-        const modelKey = key as keyof Model;
-        if (modelKey === 'skills' || modelKey === 'socialLinks') {
-            acc[key] = (model?.[modelKey] as string[] | undefined)?.join(', ') || '';
-        } else {
-            acc[key] = model?.[modelKey] ?? '';
-        }
-        return acc;
-    }, {} as any);
-
-    const form = useForm({
-      resolver: zodResolver(schema),
-      defaultValues,
-    });
-    
-    return (
-      <Dialog open={openDialog === dialogKey} onOpenChange={(open) => !open && setOpenDialog(null)}>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setOpenDialog(dialogKey)}><Edit className="h-4 w-4" /></Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
-          <form onSubmit={form.handleSubmit(data => handleFormSubmit(data, schema))} className="space-y-4">
-            <ControllerContext.Provider value={form.control}>
-              {fields}
-            </ControllerContext.Provider>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     );
   }
 
@@ -504,54 +379,65 @@ export default function ProfileDashboardPage() {
 
       <div className="grid md:grid-cols-2 gap-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="flex items-center font-headline"><User className="mr-3" /> Basic Information</CardTitle>
-            <FormDialog dialogKey="basic" />
           </CardHeader>
           <CardContent className="space-y-4">
-            <div><p className="font-semibold">Email</p><p className="text-muted-foreground">{model.email}</p></div>
+            <div className="grid grid-cols-2 gap-4">
+                <div><p className="font-semibold flex items-center gap-2"><Venus className="text-muted-foreground"/>Gender</p><p className="text-muted-foreground pl-6">{model.genderIdentity || 'N/A'}</p></div>
+                <div><p className="font-semibold flex items-center gap-2"><Cake className="text-muted-foreground"/>Date of Birth</p><p className="text-muted-foreground pl-6">{model.dateOfBirth || 'N/A'}</p></div>
+                <div><p className="font-semibold flex items-center gap-2"><Flag className="text-muted-foreground"/>Nationality</p><p className="text-muted-foreground pl-6">{model.nationality || 'N/A'}</p></div>
+                <div><p className="font-semibold flex items-center gap-2"><Languages className="text-muted-foreground"/>Languages</p><p className="text-muted-foreground pl-6">{model.spokenLanguages?.join(', ') || 'N/A'}</p></div>
+            </div>
+            <Separator />
             <div><p className="font-semibold">Bio</p><p className="text-muted-foreground">{model.bio || 'Not provided'}</p></div>
-            <div><p className="font-semibold">Location Preferences</p><p className="text-muted-foreground">{model.locationPrefs || 'Not provided'}</p></div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="flex items-center font-headline"><Ruler className="mr-3" /> Physical Attributes</CardTitle>
-            <FormDialog dialogKey="attributes" />
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
             <div className="flex items-start"><PersonStanding className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Height</p><p className="text-muted-foreground">{model.height} cm</p></div></div>
             <div className="flex items-start"><Weight className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Weight</p><p className="text-muted-foreground">{model.weight ? `${model.weight} kg` : 'N/A'}</p></div></div>
             <div className="flex items-start"><Ruler className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Measurements</p><p className="text-muted-foreground">{`${model.bust}-${model.waist}-${model.hips} cm`}</p></div></div>
+            <div className="flex items-start"><Sigma className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Cup Size</p><p className="text-muted-foreground">{model.cupSize || 'N/A'}</p></div></div>
             <div className="flex items-start"><Eye className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Eye Color</p><p className="text-muted-foreground">{model.eyeColor}</p></div></div>
             <div className="flex items-start"><Palette className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Hair Color</p><p className="text-muted-foreground">{model.hairColor}</p></div></div>
+            <div className="flex items-start"><Info className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Dress Size</p><p className="text-muted-foreground">{model.dressSize || 'N/A'}</p></div></div>
             <div className="flex items-start"><Tag className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Ethnicity</p><p className="text-muted-foreground">{model.ethnicity || 'N/A'}</p></div></div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="flex items-center font-headline"><Star className="mr-3" /> Professional Details</CardTitle>
-            <FormDialog dialogKey="professional" />
           </CardHeader>
           <CardContent className="space-y-4">
-            <div><p className="font-semibold">Experience Level</p><p className="text-muted-foreground">{model.experience}</p></div>
-            <div><p className="font-semibold">Availability</p><p className="text-muted-foreground">{model.availability}</p></div>
+            <div className="flex items-start"><Briefcase className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Experience</p><p className="text-muted-foreground">{model.experience} ({model.yearsOfExperience || 0} years)</p></div></div>
+             <div className="flex items-start"><CalendarDays className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Availability</p><p className="text-muted-foreground">{model.availability} ({model.timeAvailability?.join(', ')})</p></div></div>
+            <div><p className="font-semibold flex items-center gap-2"><Hand className="text-muted-foreground"/>Modeling Work</p><div className="flex flex-wrap gap-2 mt-1 pl-6">{model.modelingWork && model.modelingWork.length > 0 ? model.modelingWork.map((work, i) => (<Badge key={i} variant="secondary">{work.trim()}</Badge>)) : <p className="text-sm text-muted-foreground">No specific work types listed.</p>}</div></div>
             <div><p className="font-semibold">Skills</p><div className="flex flex-wrap gap-2 mt-1">{model.skills && model.skills.length > 0 ? model.skills.map((skill, i) => (<Badge key={i} variant="secondary">{skill.trim()}</Badge>)) : <p className="text-sm text-muted-foreground">No skills listed.</p>}</div></div>
-            <div><p className="font-semibold">Social Links</p><div className="flex flex-wrap gap-2 mt-1">{model.socialLinks && model.socialLinks.length > 0 ? model.socialLinks.map((link, i) => (<Button key={i} asChild variant="outline" size="sm"><a href={link} target="_blank" rel="noopener noreferrer"><LinkIcon className="mr-2" /> Link</a></Button>)) : <p className="text-sm text-muted-foreground">No links provided.</p>}</div></div>
+            <div><p className="font-semibold">Social & Portfolio Links</p><div className="flex flex-wrap gap-2 mt-1">{model.socialLinks && model.socialLinks.map((link, i) => (<Button key={i} asChild variant="outline" size="sm"><a href={link} target="_blank" rel="noopener noreferrer"><LinkIcon className="mr-2" /> Social</a></Button>))} {model.portfolioLink && <Button asChild variant="outline" size="sm"><a href={model.portfolioLink} target="_blank" rel="noopener noreferrer"><LinkIcon className="mr-2" /> Portfolio</a></Button>}</div></div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center font-headline"><ShieldCheck className="mr-3" /> Consent Settings</CardTitle>
-            <FormDialog dialogKey="consent" />
+          <CardHeader>
+            <CardTitle className="flex items-center font-headline"><PiggyBank className="mr-3" /> Rates & Consent</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <p>Bikini Shoots: <Badge variant={model.consentBikini ? "default" : "outline"}>{model.consentBikini ? 'Consented' : 'Not Consented'}</Badge></p>
-            <p>Semi-Nude Shoots: <Badge variant={model.consentSemiNude ? "default" : "outline"}>{model.consentSemiNude ? 'Consented' : 'Not Consented'}</Badge></p>
-            <p>Nude Shoots: <Badge variant={model.consentNude ? "default" : "outline"}>{model.consentNude ? 'Consented' : 'Not Consented'}</Badge></p>
+          <CardContent className="space-y-4">
+             <div><p className="font-semibold">Rates</p><p className="text-muted-foreground">Hourly: ${model.hourlyRate || 'N/A'} | Day: ${model.dayRate || 'N/A'}</p><p className="text-muted-foreground">TFP: {model.tfp ? 'Yes' : 'No'}</p></div>
+             <Separator/>
+            <div>
+                <p className="font-semibold">Consent Settings</p>
+                <div className="space-y-1 mt-1 text-muted-foreground">
+                    <p>Bikini Shoots: <Badge variant={model.consentBikini ? "default" : "outline"}>{model.consentBikini ? 'Consented' : 'Not Consented'}</Badge></p>
+                    <p>Semi-Nude Shoots: <Badge variant={model.consentSemiNude ? "default" : "outline"}>{model.consentSemiNude ? 'Consented' : 'Not Consented'}</Badge></p>
+                    <p>Nude Shoots: <Badge variant={model.consentNude ? "default" : "outline"}>{model.consentNude ? 'Consented' : 'Not Consented'}</Badge></p>
+                </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -605,96 +491,3 @@ export default function ProfileDashboardPage() {
     </>
   );
 }
-
-
-// --- Reusable Form Field Components ---
-
-const ControllerContext = React.createContext<any>(null);
-
-function FormField({ name, label, type, placeholder }: { name: string; label: string; type: string; placeholder?: string }) {
-  const control = React.useContext(ControllerContext);
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>{label}</Label>
-      <Controller
-        name={name}
-        control={control}
-        render={({ field, fieldState }) => (
-            <>
-                {type === 'textarea' ? (
-                    <Textarea id={name} {...field} placeholder={placeholder} />
-                ) : (
-                    <Input id={name} type={type} {...field} placeholder={placeholder} />
-                )}
-                {fieldState.error && <p className="text-sm text-destructive">{fieldState.error.message}</p>}
-            </>
-        )}
-      />
-    </div>
-  );
-}
-
-function FormSelect({ name, label, options }: { name: string; label: string; options: string[]}) {
-  const control = React.useContext(ControllerContext);
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Controller
-        name={name}
-        control={control}
-        render={({ field }) => (
-          <Select onValueChange={field.onChange} defaultValue={field.value}>
-            <SelectTrigger><SelectValue placeholder={`Select ${label.toLowerCase()}`} /></SelectTrigger>
-            <SelectContent>
-              {options.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-      />
-    </div>
-  );
-}
-
-function FormRadioGroup({ name, label, options }: { name: string; label: string; options: string[]}) {
-    const control = React.useContext(ControllerContext);
-    return (
-        <div className="space-y-2">
-            <Label>{label}</Label>
-            <Controller
-                name={name}
-                control={control}
-                render={({ field }) => (
-                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
-                        {options.map(option => (
-                             <div key={option} className="flex items-center space-x-2">
-                                <RadioGroupItem value={option} id={`${name}-${option}`} />
-                                <Label htmlFor={`${name}-${option}`}>{option}</Label>
-                            </div>
-                        ))}
-                    </RadioGroup>
-                )}
-            />
-        </div>
-    )
-}
-
-function FormCheckbox({ name, label, description }: { name: string; label: string; description: string; }) {
-    const control = React.useContext(ControllerContext);
-    return (
-        <Controller
-            name={name}
-            control={control}
-            render={({ field }) => (
-                <div className="flex items-start space-x-3">
-                    <Checkbox id={name} checked={field.value as boolean} onCheckedChange={field.onChange} className="mt-1" />
-                    <div className="grid gap-1.5 leading-none">
-                        <Label htmlFor={name} className="font-semibold">{label}</Label>
-                        <p className="text-sm text-muted-foreground">{description}</p>
-                    </div>
-                </div>
-            )}
-        />
-    )
-}
-
-    
