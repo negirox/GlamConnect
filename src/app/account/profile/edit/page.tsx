@@ -28,7 +28,7 @@ import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useForm, Controller } from 'react-hook-form';
 import { Model } from "@/lib/mock-data";
-import { getModels } from "@/lib/data-actions";
+import { getModelByEmail } from "@/lib/data-actions";
 import { updateModel } from "@/lib/model-actions";
 import { uploadImage } from "@/lib/upload-actions";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Image from "next/image";
 import Link from "next/link";
+import { getSession } from "@/lib/auth-actions";
+import { useRouter } from "next/navigation";
 
 
 const profileSchema = z.object({
@@ -70,6 +72,7 @@ export default function ProfileManagementPage() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const [isUploading, setIsUploading] = useState<Record<string, boolean>>({});
+  const router = useRouter();
 
   const [consentBikini, setConsentBikini] = useState(false);
   const [consentSemiNude, setConsentSemiNude] = useState(false);
@@ -82,19 +85,23 @@ export default function ProfileManagementPage() {
   useEffect(() => {
     async function fetchModel() {
       setLoading(true);
-      const fetchedModels = await getModels();
-      if (fetchedModels && fetchedModels.length > 0) {
-        const currentModel = fetchedModels[0];
-        setModel(currentModel);
-        setConsentBikini(currentModel.consentBikini || false);
-        setConsentSemiNude(currentModel.consentSemiNude || false);
-        setConsentNude(currentModel.consentNude || false);
+      const session = await getSession();
 
+      if (!session.isLoggedIn || !session.email) {
+        router.push('/login');
+        return;
+      }
+      const fetchedModel = await getModelByEmail(session.email);
+      if (fetchedModel) {
+        setModel(fetchedModel);
+        setConsentBikini(fetchedModel.consentBikini || false);
+        setConsentSemiNude(fetchedModel.consentSemiNude || false);
+        setConsentNude(fetchedModel.consentNude || false);
       }
       setLoading(false);
     }
     fetchModel();
-  }, []);
+  }, [router]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof Model, isMultiple: boolean) => {
     if (!model || !e.target.files) return;
@@ -156,9 +163,9 @@ export default function ProfileManagementPage() {
         title: "Profile Updated",
         description: `Your ${tab} information has been saved.`,
       });
-      const fetchedModels = await getModels();
-       if (fetchedModels && fetchedModels.length > 0) {
-        setModel(fetchedModels[0]);
+      const fetchedModel = await getModelByEmail(model.email);
+       if (fetchedModel) {
+        setModel(fetchedModel);
       }
 
     } catch (error) {
@@ -681,4 +688,3 @@ export default function ProfileManagementPage() {
     </div>
   );
 }
-

@@ -7,30 +7,37 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { getModels } from '@/lib/data-actions';
+import { getModelByEmail } from '@/lib/data-actions';
 import type { Model } from '@/lib/mock-data';
 import { Loader2, User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
+import { getSession } from '@/lib/auth-actions';
+import { useRouter } from 'next/navigation';
 
 export default function ProfileDashboardPage() {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    async function fetchModel() {
+    async function fetchProfile() {
       setLoading(true);
-      // In a real app, you'd get the current logged-in user's ID
-      // For now, we'll fetch the first model as the signed-in user
-      const models = await getModels();
-      if (models.length > 0) {
-        setModel(models[0]);
+      const session = await getSession();
+      if (!session.isLoggedIn || !session.email) {
+        router.push('/login');
+        return;
+      }
+
+      const fetchedModel = await getModelByEmail(session.email);
+      if (fetchedModel) {
+        setModel(fetchedModel);
       }
       setLoading(false);
     }
-    fetchModel();
-  }, []);
+    fetchProfile();
+  }, [router]);
 
   if (loading) {
     return (

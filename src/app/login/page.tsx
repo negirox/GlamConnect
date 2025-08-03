@@ -26,6 +26,8 @@ import {
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { login } from "@/lib/auth-actions";
+import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -34,9 +36,9 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
+    
     const form = useForm<z.infer<typeof loginSchema>>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
@@ -47,16 +49,23 @@ export default function LoginPage() {
 
     async function onSubmit(values: z.infer<typeof loginSchema>) {
         setIsLoading(true);
-        setError(null);
-        // In a real app, you would call an authentication action here.
-        // For this prototype, we'll simulate a successful login.
-        console.log("Login submitted with:", values);
-        setTimeout(() => {
+        const result = await login(values);
+        
+        if (result?.error) {
+            toast({
+                title: "Login Failed",
+                description: result.error,
+                variant: "destructive",
+            });
             setIsLoading(false);
-            // Simulate success and redirect
+        } else {
+             toast({
+                title: "Login Successful!",
+                description: "Welcome back!",
+            });
             router.push('/account/profile');
-            router.refresh(); // Force a refresh to fetch new user data
-        }, 1000);
+            router.refresh(); 
+        }
     }
 
 
@@ -72,7 +81,6 @@ export default function LoginPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {error && <p className="text-sm font-medium text-destructive">{error}</p>}
               <FormField
                 control={form.control}
                 name="email"
@@ -124,5 +132,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

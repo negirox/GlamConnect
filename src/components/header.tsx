@@ -11,9 +11,13 @@ import {
   Sparkles,
   MessageSquare,
   User,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from './logo';
+import { useEffect, useState } from 'react';
+import { getSession, logout } from '@/lib/auth-actions';
+
 
 const navLinks = [
   { href: '/search', label: 'Search', icon: Search },
@@ -24,6 +28,16 @@ const navLinks = [
 
 export function Header() {
   const pathname = usePathname();
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchSession = async () => {
+        const sessionData = await getSession();
+        setSession(sessionData);
+    };
+    fetchSession();
+  }, [pathname]);
+
 
   const NavLink = ({ href, label, icon: Icon }: (typeof navLinks)[0]) => {
     const isActive = pathname.startsWith(href);
@@ -52,12 +66,23 @@ export function Header() {
           ))}
         </nav>
         <div className="hidden md:flex items-center gap-2">
-           <Button asChild variant="ghost">
-              <Link href="/login">Log In</Link>
-            </Button>
-           <Button asChild className="bg-secondary hover:bg-accent">
-             <Link href="/signup">Sign Up</Link>
-           </Button>
+            {session?.isLoggedIn ? (
+                 <form action={logout}>
+                    <Button variant="ghost" type="submit">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                    </Button>
+                </form>
+            ) : (
+                <>
+                    <Button asChild variant="ghost">
+                    <Link href="/login">Log In</Link>
+                    </Button>
+                    <Button asChild className="bg-secondary hover:bg-accent">
+                    <Link href="/signup">Sign Up</Link>
+                    </Button>
+                </>
+            )}
         </div>
         <div className="md:hidden">
           <Sheet>
@@ -76,12 +101,23 @@ export function Header() {
                   ))}
                 </nav>
                 <div className="border-t pt-4 flex flex-col gap-2">
-                    <Button asChild variant="ghost">
-                        <Link href="/login">Log In</Link>
-                    </Button>
-                    <Button asChild className="bg-secondary hover:bg-accent">
-                        <Link href="/signup">Sign Up</Link>
-                    </Button>
+                   {session?.isLoggedIn ? (
+                         <form action={logout}>
+                            <Button variant="ghost" type="submit" className="w-full">
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Logout
+                            </Button>
+                        </form>
+                    ) : (
+                        <>
+                            <Button asChild variant="ghost">
+                                <Link href="/login">Log In</Link>
+                            </Button>
+                            <Button asChild className="bg-secondary hover:bg-accent">
+                                <Link href="/signup">Sign Up</Link>
+                            </Button>
+                        </>
+                    )}
                 </div>
               </div>
             </SheetContent>
