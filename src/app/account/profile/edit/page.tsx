@@ -101,6 +101,7 @@ export default function ProfileManagementPage() {
 
   useEffect(() => {
     fetchModel();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof Model, isMultiple: boolean) => {
@@ -126,6 +127,7 @@ export default function ProfileManagementPage() {
         const uploadPromises = files.map(file => {
           const formData = new FormData();
           formData.append('file', file);
+          formData.append('fieldName', field);
           return uploadImage(formData);
         });
         const newImageUrls = await Promise.all(uploadPromises);
@@ -133,13 +135,12 @@ export default function ProfileManagementPage() {
       } else {
          const formData = new FormData();
          formData.append('file', files[0]);
+         formData.append('fieldName', field);
          const result = await uploadImage(formData);
          updatedImagePaths = result.filePath;
       }
 
       await updateModel(model.id, { [field]: updatedImagePaths });
-      // This is not ideal as it refetches everything, but it's the simplest
-      // way to ensure UI consistency without complex state management.
       await fetchModel(); 
       
       toast({
@@ -147,11 +148,11 @@ export default function ProfileManagementPage() {
         description: "Your images have been uploaded and your profile is updated.",
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload failed", error);
       toast({
         title: "Upload Failed",
-        description: "There was an error uploading your images.",
+        description: error.message || "There was an error uploading your images.",
         variant: "destructive",
       });
     } finally {
@@ -293,7 +294,7 @@ export default function ProfileManagementPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                  <div className="space-y-2">
-                    <Label>Profile Picture</Label>
+                    <Label>Profile Picture (Max 500KB)</Label>
                     <div className="flex items-center gap-4">
                         <div className="relative h-24 w-24 rounded-full">
                             <Image src={model.profilePicture} alt="Profile Picture" fill className="rounded-full object-cover" />
@@ -454,7 +455,7 @@ export default function ProfileManagementPage() {
             <CardHeader>
               <CardTitle className="font-headline">Portfolio Showcase</CardTitle>
               <CardDescription>
-                Upload your best work. High-resolution images are recommended. These images are publicly visible. <span className="font-bold text-destructive">Uploading new images will replace all existing ones.</span>
+                Upload your best work (Max 2MB per image). High-resolution images are recommended. These images are publicly visible. <span className="font-bold text-destructive">Uploading new images will replace all existing ones.</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -464,7 +465,7 @@ export default function ProfileManagementPage() {
                             <>
                                 <Upload className="w-10 h-10 mb-3 text-muted-foreground"/>
                                 <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-muted-foreground">PNG, JPG or GIF (High-resolution recommended)</p>
+                                <p className="text-xs text-muted-foreground">PNG, JPG or GIF (Max 2MB each)</p>
                             </>
                          }
                         <Input id="portfolio-upload" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'portfolioImages', true)} disabled={isUploading.portfolioImages}/>
@@ -600,7 +601,7 @@ export default function ProfileManagementPage() {
                     </div>
                     {consentBikini && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Bikini Portfolio (<span className="font-bold text-destructive">replaces existing</span>)</p>
+                            <p className="font-semibold">Upload Bikini Portfolio (Max 2MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-bikini" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                                     {isUploading.bikiniPortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
@@ -633,7 +634,7 @@ export default function ProfileManagementPage() {
                     </div>
                       {consentSemiNude && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Semi-Nude Portfolio (<span className="font-bold text-destructive">replaces existing</span>)</p>
+                            <p className="font-semibold">Upload Semi-Nude Portfolio (Max 2MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-semi-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                                     {isUploading.semiNudePortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
@@ -666,7 +667,7 @@ export default function ProfileManagementPage() {
                     </div>
                      {consentNude && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Nude Portfolio (<span className="font-bold text-destructive">replaces existing</span>)</p>
+                            <p className="font-semibold">Upload Nude Portfolio (Max 2MB/image, <span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                                     {isUploading.nudePortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :

@@ -4,14 +4,24 @@
 import fs from 'fs/promises';
 import path from 'path';
 
+const PROFILE_PIC_MAX_SIZE_MB = 0.5; // 500KB
+const PORTFOLIO_PIC_MAX_SIZE_MB = 2; // 2MB
+
 export async function uploadImage(formData: FormData) {
   const file = formData.get('file') as File;
+  const fieldName = formData.get('fieldName') as string;
 
   if (!file) {
     throw new Error('No file uploaded.');
   }
 
-  // Ensure the uploads directory exists
+  const maxSizeInMB = fieldName === 'profilePicture' ? PROFILE_PIC_MAX_SIZE_MB : PORTFOLIO_PIC_MAX_SIZE_MB;
+  const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+
+  if (file.size > maxSizeInBytes) {
+     throw new Error(`File is too large. Max size for this field is ${maxSizeInMB}MB.`);
+  }
+
   const uploadDir = path.join(process.cwd(), 'public', 'uploads');
   try {
     await fs.mkdir(uploadDir, { recursive: true });
@@ -49,12 +59,9 @@ export async function deleteImage(filePath: string) {
         return { success: true, message: 'File deleted successfully.' };
     } catch (error: any) {
         if (error.code === 'ENOENT') {
-            // File doesn't exist, which is fine.
              return { success: true, message: 'File did not exist, no action needed.' };
         }
         console.error(`Failed to delete file: ${serverFilePath}`, error);
-        // We don't throw an error here to prevent the entire upload process from failing
-        // if an old file can't be deleted for some reason.
         return { success: false, message: 'Failed to delete file.' };
     }
 }
