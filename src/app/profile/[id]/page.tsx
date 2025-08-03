@@ -1,4 +1,4 @@
-import { models } from '@/lib/mock-data';
+import { getModelById } from '@/lib/data-service';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,8 +18,8 @@ type ProfilePageProps = {
   params: { id: string };
 };
 
-export default function ProfilePage({ params }: ProfilePageProps) {
-  const model = models.find((m) => m.id === params.id);
+export default async function ProfilePage({ params }: ProfilePageProps) {
+  const model = await getModelById(params.id);
 
   if (!model) {
     notFound();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,7 +22,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { ModelCard } from '@/components/model-card';
-import { models } from '@/lib/mock-data';
+import { getModels } from '@/lib/data-service';
+import { Model } from '@/lib/mock-data';
 
 const recommendationSchema = z.object({
   projectDetails: z
@@ -39,6 +40,15 @@ export default function RecommendationsPage() {
   const [recommendations, setRecommendations] =
     useState<ModelRecommendationsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [allModels, setAllModels] = useState<Model[]>([]);
+
+  useEffect(() => {
+    async function loadModels() {
+      const models = await getModels();
+      setAllModels(models);
+    }
+    loadModels();
+  }, []);
 
   const form = useForm<z.infer<typeof recommendationSchema>>({
     resolver: zodResolver(recommendationSchema),
@@ -63,7 +73,7 @@ export default function RecommendationsPage() {
   }
 
   const recommendedModelData = recommendations
-    ? models.filter((model) => recommendations.recommendedModels.includes(model.name))
+    ? allModels.filter((model) => recommendations.recommendedModels.includes(model.name))
     : [];
 
   return (
