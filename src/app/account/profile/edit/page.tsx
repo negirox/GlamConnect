@@ -30,6 +30,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { Model } from "@/lib/mock-data";
 import { getModels } from "@/lib/data-actions";
 import { updateModel } from "@/lib/model-actions";
+import { uploadImage } from "@/lib/upload-actions";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -68,19 +69,19 @@ export default function ProfileManagementPage() {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
+  const [isUploading, setIsUploading] = useState<Record<string, boolean>>({});
 
   const [consentBikini, setConsentBikini] = useState(false);
   const [consentSemiNude, setConsentSemiNude] = useState(false);
   const [consentNude, setConsentNude] = useState(false);
   const [isOver18, setIsOver18] = useState(false);
+  const [selectedPortfolioCategory, setSelectedPortfolioCategory] = useState('editorial');
 
   const canEnableConsent = isOver18;
 
   useEffect(() => {
     async function fetchModel() {
       setLoading(true);
-      // Fetch all models and use the first one as the logged-in user.
-      // This is a placeholder until a proper auth system is in place.
       const fetchedModels = await getModels();
       if (fetchedModels && fetchedModels.length > 0) {
         const currentModel = fetchedModels[0];
@@ -94,6 +95,52 @@ export default function ProfileManagementPage() {
     }
     fetchModel();
   }, []);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof Model, isMultiple: boolean) => {
+    if (!model || !e.target.files) return;
+
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    setIsUploading(prev => ({ ...prev, [field]: true }));
+    
+    try {
+      let updatedImagePaths: string[] | string;
+      if (isMultiple) {
+        const uploadPromises = files.map(file => {
+          const formData = new FormData();
+          formData.append('file', file);
+          return uploadImage(formData);
+        });
+        const newImageUrls = await Promise.all(uploadPromises);
+        const existingImages = (model[field] as string[] || []);
+        updatedImagePaths = [...existingImages, ...newImageUrls.map(result => result.filePath).filter(Boolean) as string[]];
+      } else {
+         const formData = new FormData();
+         formData.append('file', files[0]);
+         const result = await uploadImage(formData);
+         updatedImagePaths = result.filePath;
+      }
+
+      await updateModel(model.id, { [field]: updatedImagePaths });
+      setModel(prev => prev ? { ...prev, [field]: updatedImagePaths } : null);
+      
+      toast({
+        title: "Upload Successful",
+        description: "Your images have been uploaded and your profile is updated.",
+      });
+
+    } catch (error) {
+      console.error("Upload failed", error);
+      toast({
+        title: "Upload Failed",
+        description: "There was an error uploading your images.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(prev => ({ ...prev, [field]: false }));
+    }
+  };
 
   const handleFormSubmit = async (tab: string, data: any) => {
     if (!model) return;
@@ -235,8 +282,14 @@ export default function ProfileManagementPage() {
                     <div className="flex items-center gap-4">
                         <div className="relative h-24 w-24 rounded-full">
                             <Image src={model.profilePicture} alt="Profile Picture" fill className="rounded-full object-cover" />
+                             {isUploading.profilePicture && <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full"><Loader2 className="h-6 w-6 animate-spin text-white"/></div>}
                         </div>
-                        <Button type="button" variant="outline"><Upload className="mr-2 h-4 w-4" />Upload New</Button>
+                        <Button asChild type="button" variant="outline">
+                            <Label>
+                                <Upload className="mr-2 h-4 w-4" />Upload New
+                                <Input type="file" className="hidden" accept="image/*" onChange={e => handleFileUpload(e, 'profilePicture', false)} disabled={isUploading.profilePicture}/>
+                             </Label>
+                        </Button>
                     </div>
                  </div>
                 <div className="space-y-2">
@@ -388,32 +441,19 @@ export default function ProfileManagementPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="space-y-2 mb-6">
-                    <Label htmlFor="category">Image Category</Label>
-                    <Select name="category" defaultValue="editorial">
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="editorial">Editorial</SelectItem>
-                            <SelectItem value="commercial">Commercial</SelectItem>
-                            <SelectItem value="casual">Casual</SelectItem>
-                            <SelectItem value="traditional">Traditional</SelectItem>
-                            <SelectItem value="runway">Runway</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex items-center justify-center w-full">
-                    <Label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-10 h-10 mb-3 text-muted-foreground"/>
-                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                            <p className="text-xs text-muted-foreground">PNG, JPG or GIF (High-resolution recommended)</p>
-                        </div>
-                        <Input id="dropzone-file" type="file" className="hidden" multiple />
+                <div className="flex items-center justify-center w-full mb-6">
+                    <Label htmlFor="portfolio-upload" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                         {isUploading.portfolioImages ? <Loader2 className="h-10 w-10 animate-spin text-muted-foreground"/> :
+                            <>
+                                <Upload className="w-10 h-10 mb-3 text-muted-foreground"/>
+                                <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                <p className="text-xs text-muted-foreground">PNG, JPG or GIF (High-resolution recommended)</p>
+                            </>
+                         }
+                        <Input id="portfolio-upload" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'portfolioImages', true)} disabled={isUploading.portfolioImages}/>
                     </Label>
                 </div>
-                <p className="font-semibold mt-6 mb-4">Current Portfolio:</p>
+                <p className="font-semibold mt-6 mb-4">Current Portfolio ({model.portfolioImages.length} images):</p>
                 <div className="grid grid-cols-3 gap-4">
                     {model.portfolioImages.map((img, i) => (
                          <div key={i} className="relative aspect-square">
@@ -422,9 +462,6 @@ export default function ProfileManagementPage() {
                     ))}
                 </div>
             </CardContent>
-            <CardFooter>
-              <Button>Update Portfolio</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
          <TabsContent value="professional">
@@ -545,12 +582,21 @@ export default function ProfileManagementPage() {
                             <p className="font-semibold">Upload Bikini Portfolio (min. 4 images)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-bikini" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                                    {isUploading.bikiniPortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
                                         <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
                                         <p>Click to upload or drag & drop</p>
                                     </div>
-                                    <Input id="dropzone-bikini" type="file" className="hidden" multiple />
+                                    }
+                                    <Input id="dropzone-bikini" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'bikiniPortfolioImages', true)} disabled={isUploading.bikiniPortfolioImages}/>
                                 </Label>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                                {model.bikiniPortfolioImages?.map((img, i) => (
+                                    <div key={i} className="relative aspect-square">
+                                        <Image src={img} alt="bikini portfolio image" className="rounded-md object-cover w-full h-full" width={100} height={100}/>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -569,12 +615,21 @@ export default function ProfileManagementPage() {
                             <p className="font-semibold">Upload Semi-Nude Portfolio (min. 4 images)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-semi-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                                    {isUploading.semiNudePortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
                                         <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
                                         <p>Click to upload or drag & drop</p>
                                     </div>
-                                    <Input id="dropzone-semi-nude" type="file" className="hidden" multiple />
+                                    }
+                                    <Input id="dropzone-semi-nude" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'semiNudePortfolioImages', true)} disabled={isUploading.semiNudePortfolioImages}/>
                                 </Label>
+                            </div>
+                             <div className="grid grid-cols-4 gap-2">
+                                {model.semiNudePortfolioImages?.map((img, i) => (
+                                    <div key={i} className="relative aspect-square">
+                                        <Image src={img} alt="semi-nude portfolio image" className="rounded-md object-cover w-full h-full" width={100} height={100}/>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -593,12 +648,21 @@ export default function ProfileManagementPage() {
                             <p className="font-semibold">Upload Nude Portfolio (min. 4 images)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                                    {isUploading.nudePortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
                                         <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
                                         <p>Click to upload or drag & drop</p>
                                     </div>
-                                    <Input id="dropzone-nude" type="file" className="hidden" multiple />
+                                    }
+                                    <Input id="dropzone-nude" type="file" className="hidden" multiple onChange={e => handleFileUpload(e, 'nudePortfolioImages', true)} disabled={isUploading.nudePortfolioImages}/>
                                  </Label>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                                {model.nudePortfolioImages?.map((img, i) => (
+                                    <div key={i} className="relative aspect-square">
+                                        <Image src={img} alt="nude portfolio image" className="rounded-md object-cover w-full h-full" width={100} height={100}/>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}

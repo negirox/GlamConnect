@@ -139,6 +139,7 @@ export async function updateModel(id: string, updatedData: Partial<Model>) {
         
         writeModels(models);
 
+        revalidatePath('/account/profile/edit');
         revalidatePath('/account/profile');
         revalidatePath(`/profile/${id}`);
 
