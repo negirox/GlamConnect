@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, MapPin, BadgeCheck, Tag, ShieldCheck, AlertTriangle, Loader2 } from "lucide-react";
+import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState, useEffect } from "react";
@@ -78,7 +78,6 @@ export default function ProfileManagementPage() {
   const [consentSemiNude, setConsentSemiNude] = useState(false);
   const [consentNude, setConsentNude] = useState(false);
   const [isOver18, setIsOver18] = useState(false);
-  const [selectedPortfolioCategory, setSelectedPortfolioCategory] = useState('editorial');
 
   const canEnableConsent = isOver18;
 
@@ -154,8 +153,8 @@ export default function ProfileManagementPage() {
 
     setIsSubmitting(prev => ({...prev, [tab]: true}));
 
-    if (data.skills) data.skills = data.skills.split(',').map((s: string) => s.trim());
-    if (data.socialLinks) data.socialLinks = data.socialLinks.split(',').map((s: string) => s.trim());
+    if (data.skills && typeof data.skills === 'string') data.skills = data.skills.split(',').map((s: string) => s.trim());
+    if (data.socialLinks && typeof data.socialLinks === 'string') data.socialLinks = data.socialLinks.split(',').map((s: string) => s.trim());
 
     try {
       await updateModel(model.id, data);
@@ -259,10 +258,11 @@ export default function ProfileManagementPage() {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
-      <div className="flex items-center mb-8">
+      <div className="space-y-2 mb-8">
         <h1 className="text-4xl font-headline font-bold">Manage Your Profile</h1>
-        <BadgeCheck className="ml-4 h-8 w-8 text-blue-500" />
+        <p className="text-muted-foreground">This is your main profile editing area. Make sure to keep your details up to date!</p>
       </div>
+
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className="grid w-full grid-cols-5 bg-primary/80">
           <TabsTrigger value="basic"><User className="mr-2 h-4 w-4"/>Basic Info</TabsTrigger>
@@ -315,11 +315,12 @@ export default function ProfileManagementPage() {
                   <Textarea id="bio" placeholder="Tell us a little about yourself" {...basicInfoForm.register('bio')}/>
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="gap-2">
                 <Button type="submit" disabled={isSubmitting.basic}>
                     {isSubmitting.basic && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                 </Button>
+                <Button variant="outline" asChild><Link href="/account/profile">Cancel</Link></Button>
               </CardFooter>
             </Card>
           </form>
@@ -427,11 +428,12 @@ export default function ProfileManagementPage() {
                             </div>
                         </div>
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="gap-2">
                         <Button type="submit" disabled={isSubmitting.attributes}>
                             {isSubmitting.attributes && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Save Attributes
                         </Button>
+                        <Button variant="outline" asChild><Link href="/account/profile">Cancel</Link></Button>
                     </CardFooter>
                 </Card>
            </form>
@@ -466,6 +468,9 @@ export default function ProfileManagementPage() {
                     ))}
                 </div>
             </CardContent>
+             <CardFooter>
+                <Button asChild><Link href="/account/profile">Done</Link></Button>
+            </CardFooter>
           </Card>
         </TabsContent>
          <TabsContent value="professional">
@@ -541,11 +546,12 @@ export default function ProfileManagementPage() {
                         </div>
                     </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="gap-2">
                   <Button type="submit" disabled={isSubmitting.professional}>
                     {isSubmitting.professional && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Professional Details
                   </Button>
+                  <Button variant="outline" asChild><Link href="/account/profile">Cancel</Link></Button>
                 </CardFooter>
             </Card>
           </form>
@@ -673,11 +679,12 @@ export default function ProfileManagementPage() {
                 </div>
 
             </CardContent>
-            <CardFooter>
+            <CardFooter className="gap-2">
                 <Button onClick={handleConsentSubmit} disabled={!canEnableConsent || isSubmitting.consent}>
                     {isSubmitting.consent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Consent Settings
                 </Button>
+                <Button variant="outline" asChild><Link href="/account/profile">Cancel</Link></Button>
             </CardFooter>
           </Card>
         </TabsContent>
