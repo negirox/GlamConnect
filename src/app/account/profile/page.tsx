@@ -28,6 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent,  SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Full Name is required'),
@@ -206,16 +207,27 @@ export default function ProfileDashboardPage() {
   };
 
   const getVerificationBadge = () => {
-    switch(model.verificationStatus) {
-        case 'Verified':
-            return <BadgeCheck className="h-7 w-7 text-blue-500" title="Verified"/>;
-        case 'Pending':
-            return <Clock className="h-6 w-6 text-orange-500" title="Pending Verification"/>;
-        case 'Not Verified':
-            return <AlertCircle className="h-6 w-6 text-muted-foreground" title="Not Verified"/>
-        default:
-            return null;
-    }
+    const statusMap = {
+      'Verified': { icon: BadgeCheck, color: 'text-blue-500', text: 'Verified' },
+      'Pending': { icon: Clock, color: 'text-orange-500', text: 'Pending Verification' },
+      'Not Verified': { icon: AlertCircle, color: 'text-muted-foreground', text: 'Not Verified' },
+    };
+    
+    const currentStatus = model.verificationStatus || 'Not Verified';
+    const { icon: Icon, color, text } = statusMap[currentStatus];
+
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger>
+                     <Icon className={`h-7 w-7 ${color}`} />
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{text}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
   }
 
 
