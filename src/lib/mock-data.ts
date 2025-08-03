@@ -30,7 +30,7 @@ export type Model = {
   braces?: boolean;
   experience: 'New Face' | 'Experienced' | 'Expert';
   yearsOfExperience?: number;
-  modelingWork?: ('Editorial' | 'Commercial' | 'Runway' | 'Fitness' | 'Swimwear' | 'Semi-nude' | 'Nude')[];
+  modelingWork?: string[];
   previousClients?: string;
   agencyRepresented?: boolean;
   agencyName?: string;
@@ -39,7 +39,7 @@ export type Model = {
   availableForBookings?: boolean;
   willingToTravel?: boolean;
   preferredRegions?: string;
-  timeAvailability?: ('Weekdays' | 'Weekends')[];
+  timeAvailability?: string[];
   hourlyRate?: number;
   dayRate?: number;
   tfp?: boolean;

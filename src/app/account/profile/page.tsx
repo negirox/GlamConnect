@@ -16,17 +16,10 @@ import { AlertTriangle } from 'lucide-react';
 import { getSession } from '@/lib/auth-actions';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { updateModel } from '@/lib/model-actions';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent,  SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { uploadImage, deleteImage } from "@/lib/upload-actions";
 import { Progress } from "@/components/ui/progress";
@@ -49,46 +42,9 @@ type UploadDialogState = {
     isMultiple: boolean;
 }
 
-// Schemas can be simplified for dashboard editing if needed, or share with edit page
-const profileSchema = z.object({
-  name: z.string().min(1, 'Full Name is required'),
-  bio: z.string().optional(),
-  location: z.string().min(1, 'Location is required'),
-  locationPrefs: z.string().optional(),
-  email: z.string().email(),
-});
-
-const attributesSchema = z.object({
-    height: z.coerce.number().positive(),
-    weight: z.coerce.number().positive().optional(),
-    bust: z.coerce.number().positive(),
-    waist: z.coerce.number().positive(),
-    hips: z.coerce.number().positive(),
-    shoeSize: z.coerce.number().positive(),
-    eyeColor: z.string(),
-    hairColor: z.string(),
-    ethnicity: z.string().optional(),
-});
-
-const professionalSchema = z.object({
-    experience: z.string(),
-    availability: z.string(),
-    skills: z.string().optional(),
-    socialLinks: z.string().optional(),
-});
-
-const consentSchema = z.object({
-    consentBikini: z.boolean().optional(),
-    consentSemiNude: z.boolean().optional(),
-    consentNude: z.boolean().optional(),
-});
-
-
 export default function ProfileDashboardPage() {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [openDialog, setOpenDialog] = useState<string | null>(null);
   const [uploadDialog, setUploadDialog] = useState<UploadDialogState>({ isOpen: false, files: [], field: null, isMultiple: false });
 
   const router = useRouter();
@@ -188,7 +144,7 @@ export default function ProfileDashboardPage() {
 
       const results = await Promise.allSettled(uploadPromises);
 
-      const newPaths: string[] = [];
+      let newPaths: string[] = [];
       const finalFilesState = [...uploadDialog.files]; 
 
       results.forEach(result => {
@@ -215,7 +171,7 @@ export default function ProfileDashboardPage() {
       if (newPaths.length > 0) {
           const updatePayload = isMultiple 
               ? { [field]: newPaths }
-              : { [field]: newPaths }; // Always use array for portfolio
+              : { [field]: newPaths[0] };
           
           await updateModel(model.id, updatePayload);
 
