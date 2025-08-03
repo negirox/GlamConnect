@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,7 +26,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-// import { createUser } from "@/lib/user-actions"; // Will be created
+import { createUser } from "@/lib/user-actions"; 
+import { useToast } from "@/hooks/use-toast";
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -41,6 +41,7 @@ const signupSchema = z.object({
 
 export default function SignupPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -56,19 +57,18 @@ export default function SignupPage() {
     async function onSubmit(values: z.infer<typeof signupSchema>) {
         setIsLoading(true);
         setError(null);
-        // try {
-        //     await createUser(values);
-        //     router.push('/login');
-        // } catch (err: any) {
-        //     setError(err.message);
-        // } finally {
-        //     setIsLoading(false);
-        // }
-        console.log("Signup submitted with:", values);
-        setTimeout(() => {
-             setIsLoading(false);
-             router.push('/login');
-        }, 1000)
+        try {
+            await createUser(values);
+            toast({
+              title: "Account Created!",
+              description: "You can now log in with your new account.",
+            });
+            router.push('/login');
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
     }
 
   return (
