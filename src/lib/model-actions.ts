@@ -46,10 +46,13 @@ function writeModels(headers: string[], models: Model[]) {
             let value = model[key];
 
             if (Array.isArray(value)) {
-                return `"${value.join(';')}"`;
+                return `"${value ? value.join(';') : ''}"`;
             }
             if (typeof value === 'string' && value.includes(',')) {
                 return `"${value}"`;
+            }
+            if (value === null || value === undefined) {
+                return '';
             }
             return value;
         }).join(',');
@@ -57,6 +60,58 @@ function writeModels(headers: string[], models: Model[]) {
 
     const csvString = [headerString, ...rows].join('\n');
     fs.writeFileSync(csvFilePath, csvString, 'utf-8');
+}
+
+export async function createModelForUser(modelData: Partial<Model>) {
+    if (!modelData.id || !modelData.email || !modelData.name) {
+        throw new Error("Cannot create a model profile with missing id, email or name.");
+    }
+    
+    const { headers, models } = readModels();
+
+    const existingModel = models.find(m => m.email === modelData.email);
+    if (existingModel) {
+        // Model profile already exists, which is fine.
+        return { success: true, message: 'Model profile already exists.' };
+    }
+
+    const defaultModel: Model = {
+        id: modelData.id,
+        name: modelData.name,
+        email: modelData.email,
+        location: '',
+        locationPrefs: '',
+        bio: '',
+        height: 0,
+        weight: undefined,
+        bust: 0,
+        waist: 0,
+        hips: 0,
+        shoeSize: 0,
+        eyeColor: '',
+        hairColor: '',
+        ethnicity: '',
+        tattoos: false,
+        piercings: false,
+        experience: 'New Face',
+        availability: 'By Project',
+        portfolioImages: [],
+        profilePicture: 'https://placehold.co/600x800.png',
+        skills: [],
+        socialLinks: [],
+        consentBikini: false,
+        consentSemiNude: false,
+        consentNude: false,
+        bikiniPortfolioImages: [],
+        semiNudePortfolioImages: [],
+        nudePortfolioImages: [],
+    };
+    
+    models.push(defaultModel);
+    writeModels(headers, models);
+    
+    revalidatePath('/account/profile');
+    return { success: true, message: 'Model profile created successfully.' };
 }
 
 
@@ -89,5 +144,3 @@ export async function updateModel(id: string, updatedData: Partial<Model>) {
         return { success: false, message };
     }
 }
-
-    
