@@ -98,7 +98,6 @@ export default function ProfileDashboardPage() {
     if (!model) return;
     setIsSubmitting(true);
     
-    // Convert comma-separated strings to arrays
     if (data.skills && typeof data.skills === 'string') {
       data.skills = data.skills.split(',').map((s: string) => s.trim());
     }
@@ -108,7 +107,7 @@ export default function ProfileDashboardPage() {
 
     try {
       await updateModel(model.id, data);
-      await fetchModel(); // Re-fetch data to update UI
+      await fetchModel(); 
       toast({
         title: "Profile Updated",
         description: `Your information has been saved successfully.`,
@@ -339,15 +338,28 @@ export default function ProfileDashboardPage() {
             <h2 className="text-3xl font-headline font-bold mb-6">Portfolio</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {model.portfolioImages.map((src, index) => (
-                <div key={index} className="relative aspect-[3/4] w-full group">
-                  <Image
-                    src={src}
-                    alt={`Portfolio image ${index + 1} for ${model.name}`}
-                    data-ai-hint="portfolio shot"
-                    fill
-                    className="object-cover rounded-lg transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
+                <Dialog key={index}>
+                  <DialogTrigger asChild>
+                    <div className="relative aspect-[3/4] w-full group overflow-hidden rounded-lg cursor-pointer">
+                      <Image
+                        src={src}
+                        alt={`Portfolio image ${index + 1} for ${model.name}`}
+                        data-ai-hint="portfolio shot"
+                        fill
+                        className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+                      />
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl">
+                     <Image
+                        src={src}
+                        alt={`Portfolio image ${index + 1} for ${model.name}`}
+                        width={800}
+                        height={1067}
+                        className="object-contain rounded-lg"
+                      />
+                  </DialogContent>
+                </Dialog>
               ))}
             </div>
           </div>
@@ -358,7 +370,6 @@ export default function ProfileDashboardPage() {
 
 // --- Reusable Form Field Components ---
 
-// Context to provide form.control to nested components
 const ControllerContext = React.createContext<any>(null);
 
 function FormField({ name, label, type, placeholder }: { name: string; label: string; type: string; placeholder?: string }) {
@@ -446,5 +457,3 @@ function FormCheckbox({ name, label, description }: { name: string; label: strin
         />
     )
 }
-
-    
