@@ -115,16 +115,16 @@ export default function ProfileManagementPage() {
     const maxSizeInMB = field === 'profilePicture' ? 0.5 : 2;
 
     try {
-        // Delete old images first
-        const oldImages = model[field];
-        if (isMultiple && Array.isArray(oldImages) && oldImages.length > 0) {
-            await Promise.all(oldImages.map(img => deleteImage(img)));
-        } else if (!isMultiple && typeof oldImages === 'string' && oldImages) {
-            await deleteImage(oldImages);
+        // For multiple images, delete all old images first.
+        if (isMultiple) {
+            const oldImages = model[field];
+            if (Array.isArray(oldImages) && oldImages.length > 0) {
+                await Promise.all(oldImages.map(img => deleteImage(img)));
+            }
         }
 
-        // Upload new images
         let updatedImagePaths: string[] | string;
+
         if (isMultiple) {
             const uploadPromises = files.map(file => {
                 const formData = new FormData();
@@ -133,14 +133,20 @@ export default function ProfileManagementPage() {
             });
             const results = await Promise.all(uploadPromises);
             
-            const failedUpload = results.find(r => !r.success);
-            if (failedUpload) {
-                throw new Error(failedUpload.message || 'An unknown upload error occurred.');
+            const failedUploads = results.filter(r => !r.success);
+            if (failedUploads.length > 0) {
+                const errorMessages = failedUploads.map(f => f.message).join(', ');
+                throw new Error(`Failed to upload some images: ${errorMessages}`);
             }
             
             updatedImagePaths = results.map(result => result.filePath).filter(Boolean) as string[];
 
         } else {
+            // For single image, delete the old image first.
+            const oldImage = model[field];
+            if (typeof oldImage === 'string' && oldImage) {
+                await deleteImage(oldImage);
+            }
             const formData = new FormData();
             formData.append('file', files[0]);
             const result = await uploadImage(formData, maxSizeInMB);
