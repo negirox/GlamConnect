@@ -28,15 +28,12 @@ import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useForm, Controller } from 'react-hook-form';
 import { Model } from "@/lib/mock-data";
-import { getModelByEmail } from "@/lib/data-actions";
+import { getModels } from "@/lib/data-actions";
 import { updateModel } from "@/lib/model-actions";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-
-// Dummy user for now. In a real app, you'd get this from an auth context.
-const DUMMY_USER_EMAIL = 'anastasia.petrova@example.com';
 
 const profileSchema = z.object({
     name: z.string().min(1, 'Full Name is required'),
@@ -80,12 +77,15 @@ export default function ProfileManagementPage() {
   useEffect(() => {
     async function fetchModel() {
       setLoading(true);
-      const fetchedModel = await getModelByEmail(DUMMY_USER_EMAIL);
-      if (fetchedModel) {
-        setModel(fetchedModel);
-        setConsentBikini(fetchedModel.consentBikini || false);
-        setConsentSemiNude(fetchedModel.consentSemiNude || false);
-        setConsentNude(fetchedModel.consentNude || false);
+      // Fetch all models and use the first one as the logged-in user.
+      // This is a placeholder until a proper auth system is in place.
+      const fetchedModels = await getModels();
+      if (fetchedModels && fetchedModels.length > 0) {
+        const currentModel = fetchedModels[0];
+        setModel(currentModel);
+        setConsentBikini(currentModel.consentBikini || false);
+        setConsentSemiNude(currentModel.consentSemiNude || false);
+        setConsentNude(currentModel.consentNude || false);
 
       }
       setLoading(false);
@@ -107,8 +107,10 @@ export default function ProfileManagementPage() {
         title: "Profile Updated",
         description: `Your ${tab} information has been saved.`,
       });
-      const fetchedModel = await getModelByEmail(DUMMY_USER_EMAIL);
-      if (fetchedModel) setModel(fetchedModel);
+      const fetchedModels = await getModels();
+       if (fetchedModels && fetchedModels.length > 0) {
+        setModel(fetchedModels[0]);
+      }
 
     } catch (error) {
       toast({

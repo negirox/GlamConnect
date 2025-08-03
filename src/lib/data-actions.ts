@@ -56,8 +56,8 @@ const csvFilePath = path.join(process.cwd(), 'public', 'models.csv');
 
 export async function getModels(): Promise<Model[]> {
   try {
+    revalidatePath('/account/profile');
     const csvData = fs.readFileSync(csvFilePath, 'utf-8');
-    revalidatePath('/', 'layout');
     return parseCSV(csvData);
   } catch (error) {
     console.error('Error reading or parsing models.csv:', error);
