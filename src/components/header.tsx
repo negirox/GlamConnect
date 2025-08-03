@@ -42,16 +42,15 @@ export function Header() {
   const NavLink = ({ href, label, icon: Icon }: (typeof navLinks)[0]) => {
     const isActive = pathname.startsWith(href);
     return (
-      <Link href={href} legacyBehavior passHref>
-        <a
-          className={cn(
-            'flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground',
-            isActive && 'text-foreground'
-          )}
-        >
-          <Icon className="h-5 w-5" />
-          <span>{label}</span>
-        </a>
+      <Link
+        href={href}
+        className={cn(
+          'flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground',
+          isActive && 'text-foreground'
+        )}
+      >
+        <Icon className="h-5 w-5" />
+        <span>{label}</span>
       </Link>
     );
   };
