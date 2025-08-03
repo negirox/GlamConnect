@@ -109,56 +109,66 @@ export default function ProfileManagementPage() {
 
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
+
     setIsUploading(prev => ({ ...prev, [field]: true }));
-    
+
+    const maxSizeInMB = field === 'profilePicture' ? 0.5 : 2;
+
     try {
-      // Delete old images first
-      const oldImages = model[field];
-      if (isMultiple && Array.isArray(oldImages)) {
-          await Promise.all(oldImages.map(img => deleteImage(img)));
-      } else if (!isMultiple && typeof oldImages === 'string') {
-          await deleteImage(oldImages);
-      }
+        // Delete old images first
+        const oldImages = model[field];
+        if (isMultiple && Array.isArray(oldImages) && oldImages.length > 0) {
+            await Promise.all(oldImages.map(img => deleteImage(img)));
+        } else if (!isMultiple && typeof oldImages === 'string' && oldImages) {
+            await deleteImage(oldImages);
+        }
 
-      // Upload new images
-      let updatedImagePaths: string[] | string;
-      if (isMultiple) {
-        const uploadPromises = files.map(file => {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('fieldName', field);
-          return uploadImage(formData);
+        // Upload new images
+        let updatedImagePaths: string[] | string;
+        if (isMultiple) {
+            const uploadPromises = files.map(file => {
+                const formData = new FormData();
+                formData.append('file', file);
+                return uploadImage(formData, maxSizeInMB);
+            });
+            const results = await Promise.all(uploadPromises);
+            
+            const failedUpload = results.find(r => !r.success);
+            if (failedUpload) {
+                throw new Error(failedUpload.message || 'An unknown upload error occurred.');
+            }
+            
+            updatedImagePaths = results.map(result => result.filePath).filter(Boolean) as string[];
+
+        } else {
+            const formData = new FormData();
+            formData.append('file', files[0]);
+            const result = await uploadImage(formData, maxSizeInMB);
+            if (!result.success) {
+                 throw new Error(result.message || 'An unknown upload error occurred.');
+            }
+            updatedImagePaths = result.filePath!;
+        }
+
+        await updateModel(model.id, { [field]: updatedImagePaths });
+        await fetchModel();
+
+        toast({
+            title: "Upload Successful",
+            description: "Your images have been uploaded and your profile is updated.",
         });
-        const newImageUrls = await Promise.all(uploadPromises);
-        updatedImagePaths = newImageUrls.map(result => result.filePath).filter(Boolean) as string[];
-      } else {
-         const formData = new FormData();
-         formData.append('file', files[0]);
-         formData.append('fieldName', field);
-         const result = await uploadImage(formData);
-         updatedImagePaths = result.filePath;
-      }
-
-      await updateModel(model.id, { [field]: updatedImagePaths });
-      await fetchModel(); 
-      
-      toast({
-        title: "Upload Successful",
-        description: "Your images have been uploaded and your profile is updated.",
-      });
 
     } catch (error: any) {
-      console.error("Upload failed", error);
-      toast({
-        title: "Upload Failed",
-        description: error.message || "There was an error uploading your images.",
-        variant: "destructive",
-      });
+        console.error("Upload failed", error);
+        toast({
+            title: "Upload Failed",
+            description: error.message || "There was an error uploading your images.",
+            variant: "destructive",
+        });
     } finally {
-      setIsUploading(prev => ({ ...prev, [field]: false }));
+        setIsUploading(prev => ({ ...prev, [field]: false }));
     }
-  };
+};
 
   const handleFormSubmit = async (tab: string, data: any) => {
     if (!model) return;

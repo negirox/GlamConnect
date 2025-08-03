@@ -4,22 +4,17 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const PROFILE_PIC_MAX_SIZE_MB = 0.5; // 500KB
-const PORTFOLIO_PIC_MAX_SIZE_MB = 2; // 2MB
-
-export async function uploadImage(formData: FormData) {
+export async function uploadImage(formData: FormData, maxSizeInMB: number) {
   const file = formData.get('file') as File;
-  const fieldName = formData.get('fieldName') as string;
 
   if (!file) {
-    throw new Error('No file uploaded.');
+    return { success: false, message: 'No file uploaded.' };
   }
 
-  const maxSizeInMB = fieldName === 'profilePicture' ? PROFILE_PIC_MAX_SIZE_MB : PORTFOLIO_PIC_MAX_SIZE_MB;
   const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
 
   if (file.size > maxSizeInBytes) {
-     throw new Error(`File is too large. Max size for this field is ${maxSizeInMB}MB.`);
+     return { success: false, message: `File is too large. Max size is ${maxSizeInMB}MB.` };
   }
 
   const uploadDir = path.join(process.cwd(), 'public', 'uploads');
@@ -28,7 +23,7 @@ export async function uploadImage(formData: FormData) {
   } catch (error: any) {
     if (error.code !== 'EEXIST') {
       console.error('Error creating upload directory:', error);
-      throw new Error('Could not create upload directory.');
+      return { success: false, message: 'Could not create upload directory.' };
     }
   }
 
@@ -42,7 +37,7 @@ export async function uploadImage(formData: FormData) {
     return { success: true, filePath: publicPath };
   } catch (error) {
     console.error('Error saving file:', error);
-    throw new Error('Failed to save file.');
+    return { success: false, message: 'Failed to save file.' };
   }
 }
 
