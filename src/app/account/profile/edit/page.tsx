@@ -163,11 +163,7 @@ export default function ProfileManagementPage() {
         title: "Profile Updated",
         description: `Your ${tab} information has been saved.`,
       });
-      const fetchedModel = await getModelByEmail(model.email);
-       if (fetchedModel) {
-        setModel(fetchedModel);
-      }
-
+      router.push('/account/profile');
     } catch (error) {
       toast({
         title: "Error",
@@ -190,6 +186,7 @@ export default function ProfileManagementPage() {
         title: "Consent Updated",
         description: `Your consent settings have been saved.`,
       });
+      router.push('/account/profile');
     } catch (error) {
        toast({
         title: "Error",

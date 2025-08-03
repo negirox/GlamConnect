@@ -1,7 +1,4 @@
 
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -9,43 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { getModelByEmail } from '@/lib/data-actions';
 import type { Model } from '@/lib/mock-data';
-import { Loader2, User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag } from 'lucide-react';
+import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { getSession } from '@/lib/auth-actions';
-import { useRouter } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
-export default function ProfileDashboardPage() {
-  const [model, setModel] = useState<Model | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
-  useEffect(() => {
-    async function fetchProfile() {
-      setLoading(true);
-      const session = await getSession();
-      if (!session.isLoggedIn || !session.email) {
-        router.push('/login');
-        return;
-      }
-
-      const fetchedModel = await getModelByEmail(session.email);
-      if (fetchedModel) {
-        setModel(fetchedModel);
-      }
-      setLoading(false);
-    }
-    fetchProfile();
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+export default async function ProfileDashboardPage() {
+  const session = await getSession();
+  if (!session.isLoggedIn || !session.email) {
+    redirect('/login');
   }
+
+  const model = await getModelByEmail(session.email);
 
   if (!model) {
     return (
