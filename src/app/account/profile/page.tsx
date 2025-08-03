@@ -9,28 +9,42 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { getModelByEmail } from '@/lib/data-actions';
 import type { Model } from '@/lib/mock-data';
-import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag, Loader2, Link as LinkIcon, AlertCircle, Clock, Upload, CircleCheck, CircleX, Trash2, Languages, Cake, Flag, Venus, Sigma, Hand, Info, PiggyBank } from 'lucide-react';
+import { User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag, Loader2, Link as LinkIcon, AlertCircle, Clock, Upload, CircleCheck, CircleX, Trash2, Languages, Cake, Flag, Venus, Sigma, Hand, Info, PiggyBank, HelpCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
 import { getSession } from '@/lib/auth-actions';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { updateModel } from '@/lib/model-actions';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { uploadImage, deleteImage } from "@/lib/upload-actions";
 import { Progress } from "@/components/ui/progress";
 import { ProfileCompletionCard } from '@/components/profile-completion-card';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 const MAX_FILE_SIZE_MB = 2;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 type UploadableFile = {
-    id: string; // Unique ID for each file object
+    id: string;
     file: File;
     status: 'pending' | 'uploading' | 'success' | 'failed';
     error?: string;
@@ -44,9 +58,55 @@ type UploadDialogState = {
     isMultiple: boolean;
 }
 
+const profileSchema = z.object({
+    name: z.string().min(1, 'Full Name is required'),
+    location: z.string().min(1, 'Location is required'),
+    bio: z.string().optional(),
+    genderIdentity: z.string().optional(),
+    dateOfBirth: z.string().optional(),
+    nationality: z.string().optional(),
+    spokenLanguages: z.string().optional(),
+});
+const attributesSchema = z.object({
+    height: z.coerce.number().positive(),
+    weight: z.coerce.number().positive().optional(),
+    bust: z.coerce.number().positive(),
+    waist: z.coerce.number().positive(),
+    hips: z.coerce.number().positive(),
+    shoeSize: z.coerce.number().positive(),
+    eyeColor: z.string(),
+    hairColor: z.string(),
+    ethnicity: z.string().optional(),
+    cupSize: z.string().optional(),
+    skinTone: z.string().optional(),
+    dressSize: z.string().optional(),
+});
+const professionalSchema = z.object({
+    experience: z.string(),
+    yearsOfExperience: z.coerce.number().optional(),
+    modelingWork: z.array(z.string()).optional(),
+    previousClients: z.string().optional(),
+    agencyRepresented: z.boolean().optional(),
+    agencyName: z.string().optional(),
+    portfolioLink: z.string().url().optional().or(z.literal('')),
+    availability: z.string(),
+    willingToTravel: z.boolean().optional(),
+    preferredRegions: z.string().optional(),
+    timeAvailability: z.array(z.string()).optional(),
+    socialLinks: z.string().optional(),
+    skills: z.string().optional(),
+});
+const ratesSchema = z.object({
+    hourlyRate: z.coerce.number().optional(),
+    dayRate: z.coerce.number().optional(),
+    tfp: z.boolean().optional(),
+});
+
 export default function ProfileDashboardPage() {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
+  const [editingSection, setEditingSection] = useState<string | null>(null);
   const [uploadDialog, setUploadDialog] = useState<UploadDialogState>({ isOpen: false, files: [], field: null, isMultiple: false });
 
   const router = useRouter();
@@ -59,7 +119,7 @@ export default function ProfileDashboardPage() {
       return;
     }
     try {
-      setLoading(true);
+      if(!editingSection) setLoading(true); // Only show main loader if not editing
       const fetchedModel = await getModelByEmail(session.email);
       setModel(fetchedModel || null);
     } catch (error) {
@@ -74,6 +134,97 @@ export default function ProfileDashboardPage() {
     fetchModel();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleFormSubmit = async (section: string, data: any) => {
+    if (!model) return;
+
+    setIsSubmitting(prev => ({...prev, [section]: true}));
+    
+    const fieldsToSplit = ['skills', 'socialLinks', 'spokenLanguages', 'previousClients'];
+    fieldsToSplit.forEach(field => {
+      if (data[field] && typeof data[field] === 'string') {
+        data[field] = data[field].split(',').map((s: string) => s.trim()).filter(Boolean);
+      }
+    });
+
+    try {
+      await updateModel(model.id, data);
+      await fetchModel(); 
+      toast({
+        title: "Profile Updated",
+        description: `Your ${section} information has been saved.`,
+      });
+      setEditingSection(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update ${section} information.`,
+        variant: "destructive",
+      });
+      console.error(error);
+    } finally {
+        setIsSubmitting(prev => ({...prev, [section]: false}));
+    }
+  };
+
+  const basicInfoForm = useForm({
+    resolver: zodResolver(profileSchema),
+    values: model ? { 
+        name: model.name,
+        location: model.location,
+        bio: model.bio || '',
+        genderIdentity: model.genderIdentity || '',
+        dateOfBirth: model.dateOfBirth || '',
+        nationality: model.nationality || '',
+        spokenLanguages: Array.isArray(model.spokenLanguages) ? model.spokenLanguages.join(', ') : model.spokenLanguages || '',
+    } : undefined,
+  });
+
+  const attributesForm = useForm({
+      resolver: zodResolver(attributesSchema),
+      values: model ? {
+        height: model.height,
+        weight: model.weight,
+        bust: model.bust,
+        waist: model.waist,
+        hips: model.hips,
+        shoeSize: model.shoeSize,
+        eyeColor: model.eyeColor,
+        hairColor: model.hairColor,
+        ethnicity: model.ethnicity || '',
+        cupSize: model.cupSize || '',
+        skinTone: model.skinTone || '',
+        dressSize: model.dressSize || '',
+      } : undefined
+  })
+
+  const professionalForm = useForm({
+      resolver: zodResolver(professionalSchema),
+      values: model ? {
+          experience: model.experience,
+          yearsOfExperience: model.yearsOfExperience || 0,
+          modelingWork: Array.isArray(model.modelingWork) ? model.modelingWork : [],
+          previousClients: Array.isArray(model.previousClients) ? model.previousClients.join(', ') : model.previousClients || '',
+          agencyRepresented: model.agencyRepresented || false,
+          agencyName: model.agencyName || '',
+          portfolioLink: model.portfolioLink || '',
+          availability: model.availability,
+          willingToTravel: model.willingToTravel || false,
+          preferredRegions: model.preferredRegions || '',
+          timeAvailability: Array.isArray(model.timeAvailability) ? model.timeAvailability : [],
+          socialLinks: Array.isArray(model.socialLinks) ? model.socialLinks.join(', ') : model.socialLinks || '',
+          skills: Array.isArray(model.skills) ? model.skills.join(', ') : model.skills || '',
+      } : undefined,
+  })
+  
+  const ratesForm = useForm({
+    resolver: zodResolver(ratesSchema),
+    values: model ? {
+        hourlyRate: model.hourlyRate,
+        dayRate: model.dayRate,
+        tfp: model.tfp,
+    } : undefined,
+  });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, field: keyof Model, isMultiple: boolean) => {
     if (!e.target.files) return;
@@ -262,7 +413,7 @@ export default function ProfileDashboardPage() {
   const hasPendingFiles = uploadDialog.files.some(f => f.status === 'pending');
 
   return (
-    <>
+    <TooltipProvider>
     <Dialog open={uploadDialog.isOpen} onOpenChange={(isOpen) => !uploadInProgress && !isOpen && setUploadDialog(prev => ({...prev, isOpen: false}))}>
       <DialogContent>
         <DialogHeader>
@@ -339,8 +490,59 @@ export default function ProfileDashboardPage() {
 
       <div className="grid md:grid-cols-2 gap-8 mt-8">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center font-headline"><User className="mr-3" /> Basic Information</CardTitle>
+             <Dialog open={editingSection === 'basic'} onOpenChange={(isOpen) => !isOpen && setEditingSection(null)}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingSection('basic')}><Edit className="h-4 w-4"/></Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Basic Information</DialogTitle>
+                    </DialogHeader>
+                    <Form {...basicInfoForm}>
+                    <form onSubmit={basicInfoForm.handleSubmit((data) => handleFormSubmit('basic', data))} className="space-y-4">
+                       <FormField control={basicInfoForm.control} name="name" render={({ field }) => (
+                            <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                       <FormField control={basicInfoForm.control} name="location" render={({ field }) => (
+                            <FormItem><FormLabel>Location</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={basicInfoForm.control} name="dateOfBirth" render={({ field }) => (
+                            <FormItem><FormLabel>Date of Birth</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                         <FormField control={basicInfoForm.control} name="genderIdentity" render={({ field }) => (
+                            <FormItem><FormLabel>Gender</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Female">Female</SelectItem>
+                                        <SelectItem value="Male">Male</SelectItem>
+                                        <SelectItem value="Non-binary">Non-binary</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            <FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={basicInfoForm.control} name="nationality" render={({ field }) => (
+                            <FormItem><FormLabel>Nationality</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={basicInfoForm.control} name="spokenLanguages" render={({ field }) => (
+                            <FormItem><FormLabel>Spoken Languages (comma-separated)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={basicInfoForm.control} name="bio" render={({ field }) => (
+                            <FormItem><FormLabel>Bio</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting.basic}>
+                                {isSubmitting.basic && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -355,8 +557,57 @@ export default function ProfileDashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center font-headline"><Ruler className="mr-3" /> Physical Attributes</CardTitle>
+            <Dialog open={editingSection === 'attributes'} onOpenChange={(isOpen) => !isOpen && setEditingSection(null)}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingSection('attributes')}><Edit className="h-4 w-4"/></Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Edit Physical Attributes</DialogTitle></DialogHeader>
+                    <Form {...attributesForm}>
+                    <form onSubmit={attributesForm.handleSubmit(data => handleFormSubmit('attributes', data))} className="grid grid-cols-2 gap-4">
+                        <FormField control={attributesForm.control} name="height" render={({ field }) => (
+                            <FormItem><FormLabel>Height (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={attributesForm.control} name="weight" render={({ field }) => (
+                            <FormItem><FormLabel>Weight (kg)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={attributesForm.control} name="bust" render={({ field }) => (
+                            <FormItem><FormLabel>Bust (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={attributesForm.control} name="waist" render={({ field }) => (
+                            <FormItem><FormLabel>Waist (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={attributesForm.control} name="hips" render={({ field }) => (
+                            <FormItem><FormLabel>Hips (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={attributesForm.control} name="shoeSize" render={({ field }) => (
+                            <FormItem><FormLabel>Shoe Size (EU)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                         <FormField control={attributesForm.control} name="cupSize" render={({ field }) => (
+                            <FormItem><FormLabel>Cup Size</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                         <FormField control={attributesForm.control} name="dressSize" render={({ field }) => (
+                            <FormItem><FormLabel>Dress Size</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                         <FormField control={attributesForm.control} name="hairColor" render={({ field }) => (
+                            <FormItem><FormLabel>Hair Color</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                         <FormField control={attributesForm.control} name="eyeColor" render={({ field }) => (
+                            <FormItem><FormLabel>Eye Color</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <DialogFooter className="col-span-2">
+                            <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting.attributes}>
+                               {isSubmitting.attributes && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
             <div className="flex items-start"><PersonStanding className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Height</p><p className="text-muted-foreground">{model.height} cm</p></div></div>
@@ -371,8 +622,81 @@ export default function ProfileDashboardPage() {
         </Card>
         
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center font-headline"><Star className="mr-3" /> Professional Details</CardTitle>
+             <Dialog open={editingSection === 'professional'} onOpenChange={(isOpen) => !isOpen && setEditingSection(null)}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingSection('professional')}><Edit className="h-4 w-4"/></Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader><DialogTitle>Edit Professional Details</DialogTitle></DialogHeader>
+                    <Form {...professionalForm}>
+                    <form onSubmit={professionalForm.handleSubmit(data => handleFormSubmit('professional', data))} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                             <FormField control={professionalForm.control} name="experience" render={({ field }) => (
+                                <FormItem><FormLabel>Experience Level</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="New Face">New Face</SelectItem>
+                                            <SelectItem value="Experienced">Experienced</SelectItem>
+                                            <SelectItem value="Expert">Expert</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                <FormMessage /></FormItem>
+                            )}/>
+                            <FormField control={professionalForm.control} name="yearsOfExperience" render={({ field }) => (
+                                <FormItem><FormLabel>Years of Experience</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                        </div>
+                        <FormField
+                            control={professionalForm.control}
+                            name="modelingWork"
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>Modeling Work Done</FormLabel>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {['Editorial', 'Commercial', 'Runway', 'Fitness', 'Swimwear', 'Semi-nude', 'Nude', 'Intimacy Photoshoot'].map((item) => (
+                                            <FormField
+                                                key={item}
+                                                control={professionalForm.control}
+                                                name="modelingWork"
+                                                render={({ field }) => (
+                                                    <FormItem key={item} className="flex flex-row items-start space-x-3 space-y-0">
+                                                        <FormControl>
+                                                            <Checkbox
+                                                                checked={field.value?.includes(item)}
+                                                                onCheckedChange={(checked) => {
+                                                                    return checked
+                                                                        ? field.onChange([...(field.value || []), item])
+                                                                        : field.onChange(field.value?.filter((value) => value !== item));
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <FormLabel className="font-normal">{item}</FormLabel>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        ))}
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField control={professionalForm.control} name="skills" render={({ field }) => (
+                            <FormItem><FormLabel>Skills (comma-separated)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting.professional}>
+                               {isSubmitting.professional && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start"><Briefcase className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Experience</p><p className="text-muted-foreground">{model.experience} ({model.yearsOfExperience || 0} years)</p></div></div>
@@ -384,8 +708,42 @@ export default function ProfileDashboardPage() {
         </Card>
         
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center font-headline"><PiggyBank className="mr-3" /> Rates & Consent</CardTitle>
+            <Dialog open={editingSection === 'rates'} onOpenChange={(isOpen) => !isOpen && setEditingSection(null)}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingSection('rates')}><Edit className="h-4 w-4"/></Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Edit Rates & Consent</DialogTitle></DialogHeader>
+                    <Form {...ratesForm}>
+                    <form onSubmit={ratesForm.handleSubmit(data => handleFormSubmit('rates', data))} className="space-y-4">
+                         <FormField control={ratesForm.control} name="hourlyRate" render={({ field }) => (
+                            <FormItem><FormLabel>Hourly Rate ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                        <FormField control={ratesForm.control} name="dayRate" render={({ field }) => (
+                            <FormItem><FormLabel>Day Rate ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                         <FormField
+                            control={ratesForm.control} name="tfp"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                    <div className="space-y-1 leading-none"><FormLabel>Open to TFP (Time for Print)</FormLabel></div>
+                                </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting.rates}>
+                               {isSubmitting.rates && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent className="space-y-4">
              <div><p className="font-semibold">Rates</p><p className="text-muted-foreground">Hourly: ${model.hourlyRate || 'N/A'} | Day: ${model.dayRate || 'N/A'}</p><p className="text-muted-foreground">TFP: {model.tfp ? 'Yes' : 'No'}</p></div>
@@ -448,6 +806,8 @@ export default function ProfileDashboardPage() {
             </div>
           </div>
     </div>
-    </>
+    </TooltipProvider>
   );
 }
+
+    
