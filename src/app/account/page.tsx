@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -18,7 +19,7 @@ export default function AccountPage() {
     <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
       <div className="flex items-center gap-2">
         <Loader2 className="h-6 w-6 animate-spin" />
-        <p>Redirecting to your profile...</p>
+        <p>Redirecting to your dashboard...</p>
       </div>
     </div>
   );

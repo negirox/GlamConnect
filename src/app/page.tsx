@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ModelCard } from '@/components/model-card';
@@ -25,7 +26,7 @@ export default async function Home() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/account/profile">Join as a Model</Link>
+              <Link href="/signup">Join as a Model</Link>
             </Button>
           </div>
         </div>

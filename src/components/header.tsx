@@ -19,14 +19,14 @@ const navLinks = [
   { href: '/search', label: 'Search', icon: Search },
   { href: '/recommendations', label: 'AI Recs', icon: Sparkles },
   { href: '/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/account/profile', label: 'Profile', icon: User },
+  { href: '/account/profile', label: 'Dashboard', icon: User },
 ];
 
 export function Header() {
   const pathname = usePathname();
 
   const NavLink = ({ href, label, icon: Icon }: (typeof navLinks)[0]) => {
-    const isActive = pathname === href;
+    const isActive = pathname.startsWith(href);
     return (
       <Link href={href} legacyBehavior passHref>
         <a
