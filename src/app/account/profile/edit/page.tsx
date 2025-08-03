@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2, CircleCheck, CircleX, Trash2 } from "lucide-react";
+import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2, CircleCheck, CircleX, Trash2, HelpCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState, useEffect } from "react";
@@ -40,6 +40,7 @@ import { getSession } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const MAX_FILE_SIZE_MB = 2;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -207,7 +208,6 @@ export default function ProfileManagementPage() {
           }
       }
 
-      // We only delete old images if we are certain new ones will be uploaded.
       if (oldImagePathsToDelete.length > 0) {
           await Promise.all(oldImagePathsToDelete.map(img => deleteImage(img)));
       }
@@ -231,8 +231,6 @@ export default function ProfileManagementPage() {
       results.forEach(result => {
          if (result.status === 'rejected') {
             console.error("An upload promise was rejected:", result.reason);
-            // Find the file and mark it as failed
-            // This is tricky without more info, but we can assume for now it's one of the uploading ones
             return;
          }
 
@@ -295,8 +293,7 @@ export default function ProfileManagementPage() {
 
     setIsSubmitting(prev => ({...prev, [tab]: true}));
     
-    // Convert comma-separated strings to arrays
-    const fieldsToSplit = ['skills', 'socialLinks', 'spokenLanguages'];
+    const fieldsToSplit = ['skills', 'socialLinks', 'spokenLanguages', 'previousClients'];
     fieldsToSplit.forEach(field => {
       if (data[field] && typeof data[field] === 'string') {
         data[field] = data[field].split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -305,7 +302,7 @@ export default function ProfileManagementPage() {
     
     try {
       await updateModel(model.id, data);
-      await fetchModel(); // Refetch to get the latest data, including converted arrays
+      await fetchModel(); 
       toast({
         title: "Profile Updated",
         description: `Your ${tab} information has been saved.`,
@@ -413,7 +410,7 @@ export default function ProfileManagementPage() {
           availability: model.availability,
           yearsOfExperience: model.yearsOfExperience || 0,
           modelingWork: model.modelingWork || [],
-          previousClients: model.previousClients || '',
+          previousClients: Array.isArray(model.previousClients) ? model.previousClients.join(', ') : model.previousClients || '',
           agencyRepresented: model.agencyRepresented || false,
           agencyName: model.agencyName || '',
           portfolioLink: model.portfolioLink || '',
@@ -454,7 +451,7 @@ export default function ProfileManagementPage() {
   const hasPendingFiles = uploadDialog.files.some(f => f.status === 'pending');
 
   return (
-    <>
+    <TooltipProvider>
     <Dialog open={uploadDialog.isOpen} onOpenChange={(isOpen) => !uploadInProgress && !isOpen && setUploadDialog(prev => ({...prev, isOpen: false}))}>
       <DialogContent>
         <DialogHeader>
@@ -573,7 +570,12 @@ export default function ProfileManagementPage() {
                       <Input id="nationality" {...basicInfoForm.register('nationality')} />
                     </div>
                      <div className="space-y-2">
-                      <Label htmlFor="languages">Spoken Languages (comma-separated)</Label>
+                      <Label htmlFor="languages" className="flex items-center gap-2">Spoken Languages 
+                        <Tooltip>
+                            <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-muted-foreground" /></TooltipTrigger>
+                            <TooltipContent><p>Enter languages separated by commas</p></TooltipContent>
+                        </Tooltip>
+                      </Label>
                       <Input id="languages" {...basicInfoForm.register('spokenLanguages')} />
                     </div>
                 </div>
@@ -818,7 +820,7 @@ export default function ProfileManagementPage() {
                     <div className="space-y-3">
                         <Label>Types of Modeling Work Done</Label>
                         <div className="grid grid-cols-3 gap-2">
-                           {['Editorial', 'Commercial', 'Runway', 'Fitness', 'Swimwear', 'Semi-nude', 'Nude'].map(work => (
+                           {['Editorial', 'Commercial', 'Runway', 'Fitness', 'Swimwear', 'Semi-nude', 'Nude', 'Intimacy Photoshoot'].map(work => (
                                 <div key={work} className="flex items-center space-x-2">
                                      <Controller
                                         name="modelingWork"
@@ -834,13 +836,18 @@ export default function ProfileManagementPage() {
                                             />
                                         }}
                                     />
-                                    <Label htmlFor={work}>{work}</Label>
+                                    <Label htmlFor={work} className="font-normal">{work}</Label>
                                 </div>
                            ))}
                         </div>
                     </div>
                      <div className="space-y-2">
-                        <Label>Previous Clients/Brands (comma-separated)</Label>
+                        <Label className="flex items-center gap-2">Previous Clients/Brands
+                           <Tooltip>
+                            <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-muted-foreground" /></TooltipTrigger>
+                            <TooltipContent><p>Enter client names separated by commas</p></TooltipContent>
+                           </Tooltip>
+                        </Label>
                         <Textarea {...professionalForm.register('previousClients')} />
                     </div>
                     <div className="grid grid-cols-2 gap-6 items-center">
@@ -863,10 +870,15 @@ export default function ProfileManagementPage() {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label>Social Links (comma-separated)</Label>
+                        <Label className="flex items-center gap-2">Social Links
+                           <Tooltip>
+                                <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-muted-foreground" /></TooltipTrigger>
+                                <TooltipContent><p>Enter full URLs separated by commas</p></TooltipContent>
+                           </Tooltip>
+                        </Label>
                          <div className="flex items-center gap-2">
                             <LinkIcon className="h-4 w-4 text-muted-foreground"/>
-                            <Input id="socialLinks" placeholder="Instagram, Behance, etc." {...professionalForm.register('socialLinks')} />
+                            <Input id="socialLinks" placeholder="https://instagram.com/..., https://behance.net/..." {...professionalForm.register('socialLinks')} />
                         </div>
                     </div>
                     <div className="space-y-3">
@@ -959,7 +971,12 @@ export default function ProfileManagementPage() {
                         </div>
                     </div>
                      <div className="space-y-2">
-                        <Label>Skills/Tags (comma-separated)</Label>
+                        <Label className="flex items-center gap-2">Skills/Tags
+                           <Tooltip>
+                                <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-muted-foreground" /></TooltipTrigger>
+                                <TooltipContent><p>Enter skills separated by commas</p></TooltipContent>
+                           </Tooltip>
+                        </Label>
                         <Input id="skills" placeholder="e.g. Runway, Commercial, Editorial, Print" {...professionalForm.register('skills')} />
                     </div>
                     <div className="flex items-start space-x-3 rounded-md border p-4">
@@ -1115,6 +1132,6 @@ export default function ProfileManagementPage() {
         </TabsContent>
       </Tabs>
     </div>
-    </>
+    </TooltipProvider>
   );
 }

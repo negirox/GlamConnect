@@ -23,6 +23,8 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { uploadImage, deleteImage } from "@/lib/upload-actions";
 import { Progress } from "@/components/ui/progress";
+import { ProfileCompletionCard } from '@/components/profile-completion-card';
+
 
 const MAX_FILE_SIZE_MB = 2;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -124,7 +126,7 @@ export default function ProfileDashboardPage() {
           if (Array.isArray(oldImages) && oldImages.length > 0) {
               await Promise.all(oldImages.map(img => deleteImage(img)));
           }
-        } else if (!isMultiple && filesToUpload.length > 0) { // Only delete if we are actually uploading a new single image
+        } else if (!isMultiple && filesToUpload.length > 0) { 
            const oldImage = model[field] as string | undefined;
           if (typeof oldImage === 'string' && oldImage) {
               await deleteImage(oldImage);
@@ -332,8 +334,10 @@ export default function ProfileDashboardPage() {
           </Link>
         </Button>
       </div>
+      
+      <ProfileCompletionCard model={model} />
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-2 gap-8 mt-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center font-headline"><User className="mr-3" /> Basic Information</CardTitle>
@@ -343,7 +347,7 @@ export default function ProfileDashboardPage() {
                 <div><p className="font-semibold flex items-center gap-2"><Venus className="text-muted-foreground"/>Gender</p><p className="text-muted-foreground pl-6">{model.genderIdentity || 'N/A'}</p></div>
                 <div><p className="font-semibold flex items-center gap-2"><Cake className="text-muted-foreground"/>Date of Birth</p><p className="text-muted-foreground pl-6">{model.dateOfBirth || 'N/A'}</p></div>
                 <div><p className="font-semibold flex items-center gap-2"><Flag className="text-muted-foreground"/>Nationality</p><p className="text-muted-foreground pl-6">{model.nationality || 'N/A'}</p></div>
-                <div><p className="font-semibold flex items-center gap-2"><Languages className="text-muted-foreground"/>Languages</p><p className="text-muted-foreground pl-6">{model.spokenLanguages?.join(', ') || 'N/A'}</p></div>
+                <div><p className="font-semibold flex items-center gap-2"><Languages className="text-muted-foreground"/>Languages</p><p className="text-muted-foreground pl-6">{Array.isArray(model.spokenLanguages) ? model.spokenLanguages.join(', ') : model.spokenLanguages || 'N/A'}</p></div>
             </div>
             <Separator />
             <div><p className="font-semibold">Bio</p><p className="text-muted-foreground">{model.bio || 'Not provided'}</p></div>
@@ -372,7 +376,7 @@ export default function ProfileDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start"><Briefcase className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Experience</p><p className="text-muted-foreground">{model.experience} ({model.yearsOfExperience || 0} years)</p></div></div>
-             <div className="flex items-start"><CalendarDays className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Availability</p><p className="text-muted-foreground">{model.availability} ({model.timeAvailability?.join(', ')})</p></div></div>
+             <div className="flex items-start"><CalendarDays className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Availability</p><p className="text-muted-foreground">{model.availability} ({Array.isArray(model.timeAvailability) ? model.timeAvailability.join(', ') : ''})</p></div></div>
             <div><p className="font-semibold flex items-center gap-2"><Hand className="text-muted-foreground"/>Modeling Work</p><div className="flex flex-wrap gap-2 mt-1 pl-6">{model.modelingWork && model.modelingWork.length > 0 ? model.modelingWork.map((work, i) => (<Badge key={i} variant="secondary">{work.trim()}</Badge>)) : <p className="text-sm text-muted-foreground">No specific work types listed.</p>}</div></div>
             <div><p className="font-semibold">Skills</p><div className="flex flex-wrap gap-2 mt-1">{model.skills && model.skills.length > 0 ? model.skills.map((skill, i) => (<Badge key={i} variant="secondary">{skill.trim()}</Badge>)) : <p className="text-sm text-muted-foreground">No skills listed.</p>}</div></div>
             <div><p className="font-semibold">Social & Portfolio Links</p><div className="flex flex-wrap gap-2 mt-1">{model.socialLinks && model.socialLinks.map((link, i) => (<Button key={i} asChild variant="outline" size="sm"><a href={link} target="_blank" rel="noopener noreferrer"><LinkIcon className="mr-2" /> Social</a></Button>))} {model.portfolioLink && <Button asChild variant="outline" size="sm"><a href={model.portfolioLink} target="_blank" rel="noopener noreferrer"><LinkIcon className="mr-2" /> Portfolio</a></Button>}</div></div>
