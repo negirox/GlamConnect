@@ -1,4 +1,5 @@
-import { models } from '@/lib/mock-data';
+
+import { getModelById } from '@/lib/data-actions';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,35 +13,47 @@ import {
   MapPin,
   Eye,
   MessageSquare,
+  Instagram,
+  Palette,
+  Tag,
+  Weight,
+  PersonStanding,
+  Link as LinkIcon,
+  BadgeCheck,
 } from 'lucide-react';
+import Link from 'next/link';
 
 type ProfilePageProps = {
   params: { id: string };
 };
 
-export default function ProfilePage({ params }: ProfilePageProps) {
-  const model = models.find((m) => m.id === params.id);
+export default async function ProfilePage({ params }: ProfilePageProps) {
+  const model = await getModelById(params.id);
 
   if (!model) {
     notFound();
   }
 
   const attributes = [
-    { icon: Ruler, label: 'Height', value: `${model.height} cm` },
+    { icon: PersonStanding, label: 'Height', value: `${model.height} cm` },
+    { icon: Weight, label: 'Weight', value: model.weight ? `${model.weight} kg` : 'N/A' },
     {
       icon: Ruler,
       label: 'Measurements',
       value: `${model.bust}-${model.waist}-${model.hips} cm`,
     },
     { icon: Eye, label: 'Eyes', value: model.eyeColor },
-    { icon: Ruler, label: 'Hair', value: model.hairColor },
+    { icon: Palette, label: 'Hair', value: model.hairColor },
     { icon: Briefcase, label: 'Experience', value: model.experience },
     { icon: CalendarDays, label: 'Availability', value: model.availability },
+    { icon: Tag, label: 'Ethnicity', value: model.ethnicity || 'N/A' },
   ];
+  
+  const socialLinks = model.socialLinks || [];
 
   return (
     <div className="container mx-auto max-w-6xl px-4 md:px-6 py-12">
-      <div className="grid md:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
         <div className="md:col-span-1 flex flex-col items-center">
           <Card className="w-full sticky top-24">
             <CardHeader className="p-0">
@@ -55,10 +68,22 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               </div>
             </CardHeader>
             <CardContent className="p-6 text-center">
-              <h1 className="text-3xl font-headline font-bold">{model.name}</h1>
+              <div className="flex items-center justify-center">
+                <h1 className="text-3xl font-headline font-bold">{model.name}</h1>
+                <BadgeCheck className="ml-2 h-6 w-6 text-blue-500" />
+              </div>
               <div className="flex items-center justify-center text-muted-foreground mt-2">
                 <MapPin className="h-4 w-4 mr-1.5" />
                 <span>{model.location}</span>
+              </div>
+              <div className="flex justify-center gap-2 mt-4">
+                  {socialLinks.map((link, index) => (
+                    <Button key={index} asChild variant="outline" size="icon">
+                      <a href={link} target="_blank" rel="noopener noreferrer">
+                        <LinkIcon className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  ))}
               </div>
               <Button size="lg" className="w-full mt-6 bg-secondary hover:bg-accent">
                 <MessageSquare className="mr-2 h-4 w-4" />
@@ -84,6 +109,15 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+              <Separator className="my-6" />
+               <div>
+                  <h3 className="font-semibold mb-3 flex items-center"><Tag className="mr-2 h-5 w-5 text-muted-foreground"/>Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                  {model.skills && model.skills.map((skill, i) => (
+                    <Badge key={i} variant="secondary">{skill.trim()}</Badge>
+                  ))}
+                  </div>
               </div>
             </CardContent>
           </Card>

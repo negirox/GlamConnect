@@ -1,10 +1,12 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ModelCard } from '@/components/model-card';
-import { models } from '@/lib/mock-data';
+import { getModels } from '@/lib/data-actions';
 import { ArrowRight } from 'lucide-react';
 
-export default function Home() {
+export default async function Home() {
+  const models = await getModels();
   const featuredModels = models.slice(0, 6);
 
   return (
@@ -24,7 +26,7 @@ export default function Home() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/account/profile">Join as a Model</Link>
+              <Link href="/signup">Join as a Model</Link>
             </Button>
           </div>
         </div>

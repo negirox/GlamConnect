@@ -1,142 +1,203 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, User, Ruler, Camera } from "lucide-react";
 
-export default function ProfileManagementPage() {
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { getModelByEmail } from '@/lib/data-actions';
+import type { Model } from '@/lib/mock-data';
+import { Loader2, User, Ruler, Star, ShieldCheck, MapPin, Edit, BadgeCheck, Weight, PersonStanding, Palette, Eye, Briefcase, CalendarDays, Tag } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
+import { getSession } from '@/lib/auth-actions';
+import { useRouter } from 'next/navigation';
+
+export default function ProfileDashboardPage() {
+  const [model, setModel] = useState<Model | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function fetchProfile() {
+      setLoading(true);
+      const session = await getSession();
+      if (!session.isLoggedIn || !session.email) {
+        router.push('/login');
+        return;
+      }
+
+      const fetchedModel = await getModelByEmail(session.email);
+      if (fetchedModel) {
+        setModel(fetchedModel);
+      }
+      setLoading(false);
+    }
+    fetchProfile();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!model) {
+    return (
+      <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12 text-center">
+          <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Profile Not Found</AlertTitle>
+              <AlertDescription>
+                 Model data not found for this user. Please complete your profile, or if you just signed up, log out and log back in.
+              </AlertDescription>
+          </Alert>
+          <Button asChild className="mt-4">
+              <Link href="/account/profile/edit">Complete Profile</Link>
+          </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
-      <h1 className="text-4xl font-headline font-bold mb-8">Manage Your Profile</h1>
-      <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-primary/80">
-          <TabsTrigger value="basic"><User className="mr-2 h-4 w-4"/>Basic Info</TabsTrigger>
-          <TabsTrigger value="attributes"><Ruler className="mr-2 h-4 w-4"/>Attributes</TabsTrigger>
-          <TabsTrigger value="portfolio"><Camera className="mr-2 h-4 w-4"/>Portfolio</TabsTrigger>
-        </TabsList>
-        <TabsContent value="basic">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Basic Information</CardTitle>
-              <CardDescription>
-                This information will be displayed on your public profile.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" defaultValue="Anastasia Petrova" />
+    <div className="container mx-auto max-w-5xl px-4 md:px-6 py-12">
+      <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
+        <div className="flex items-center">
+          <div className="relative h-24 w-24 rounded-full mr-6">
+            <Image
+              src={model.profilePicture}
+              alt={model.name}
+              data-ai-hint="fashion model"
+              fill
+              className="rounded-full object-cover"
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+                <h1 className="text-4xl font-headline font-bold">{model.name}</h1>
+                <BadgeCheck className="h-7 w-7 text-blue-500" />
+            </div>
+            <div className="flex items-center text-muted-foreground mt-2">
+                <MapPin className="h-4 w-4 mr-1.5" />
+                <span>{model.location}</span>
+            </div>
+          </div>
+        </div>
+        <Button asChild size="lg">
+          <Link href="/account/profile/edit">
+            <Edit className="mr-2 h-4 w-4" />
+            Manage Profile
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-8">
+        {/* Basic Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center font-headline">
+              <User className="mr-3" /> Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="font-semibold">Email</p>
+              <p className="text-muted-foreground">{model.email}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Bio</p>
+              <p className="text-muted-foreground">{model.bio || 'Not provided'}</p>
+            </div>
+             <div>
+              <p className="font-semibold">Location Preferences</p>
+              <p className="text-muted-foreground">{model.locationPrefs || 'Not provided'}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Physical Attributes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center font-headline">
+              <Ruler className="mr-3" /> Physical Attributes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <div className="flex items-start"><PersonStanding className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Height</p><p className="text-muted-foreground">{model.height} cm</p></div></div>
+            <div className="flex items-start"><Weight className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Weight</p><p className="text-muted-foreground">{model.weight ? `${model.weight} kg` : 'N/A'}</p></div></div>
+            <div className="flex items-start"><Ruler className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Measurements</p><p className="text-muted-foreground">{`${model.bust}-${model.waist}-${model.hips} cm`}</p></div></div>
+            <div className="flex items-start"><Eye className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Eye Color</p><p className="text-muted-foreground">{model.eyeColor}</p></div></div>
+            <div className="flex items-start"><Palette className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Hair Color</p><p className="text-muted-foreground">{model.hairColor}</p></div></div>
+            <div className="flex items-start"><Tag className="h-5 w-5 text-muted-foreground mt-0.5 mr-2 flex-shrink-0" /><div><p className="font-semibold">Ethnicity</p><p className="text-muted-foreground">{model.ethnicity || 'N/A'}</p></div></div>
+          </CardContent>
+        </Card>
+        
+        {/* Professional Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center font-headline">
+              <Star className="mr-3" /> Professional Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="font-semibold">Experience Level</p>
+              <p className="text-muted-foreground">{model.experience}</p>
+            </div>
+            <div>
+              <p className="font-semibold">Availability</p>
+              <p className="text-muted-foreground">{model.availability}</p>
+            </div>
+             <div>
+              <p className="font-semibold">Skills</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                  {model.skills && model.skills.length > 0 ? model.skills.map((skill, i) => (
+                    <Badge key={i} variant="secondary">{skill.trim()}</Badge>
+                  )) : <p className="text-sm text-muted-foreground">No skills listed.</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input id="location" defaultValue="Paris, France" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bio">Short Bio</Label>
-                <Textarea id="bio" placeholder="Tell us a little about yourself" defaultValue="Experienced fashion model based in Paris. Passionate about haute couture and editorial work. Open to travel for projects."/>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button>Save Changes</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="attributes">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Physical Attributes</CardTitle>
-              <CardDescription>
-                Accurate measurements are crucial for brands. All measurements in cm.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="height">Height (cm)</Label>
-                <Input id="height" type="number" defaultValue="178" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bust">Bust (cm)</Label>
-                <Input id="bust" type="number" defaultValue="82" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="waist">Waist (cm)</Label>
-                <Input id="waist" type="number" defaultValue="60" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="hips">Hips (cm)</Label>
-                <Input id="hips" type="number" defaultValue="89" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="shoe">Shoe Size (EU)</Label>
-                <Input id="shoe" type="number" defaultValue="39" />
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="eyes">Eye Color</Label>
-                 <Select name="eyes">
-                  <SelectTrigger><SelectValue placeholder="Select eye color" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Blue">Blue</SelectItem>
-                    <SelectItem value="Green">Green</SelectItem>
-                    <SelectItem value="Brown">Brown</SelectItem>
-                    <SelectItem value="Hazel">Hazel</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button>Save Attributes</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="portfolio">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Portfolio Showcase</CardTitle>
-              <CardDescription>
-                Upload your best work. High-quality images are recommended.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="flex items-center justify-center w-full">
-                    <Label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-10 h-10 mb-3 text-muted-foreground"/>
-                            <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                            <p className="text-xs text-muted-foreground">PNG, JPG or GIF (MAX. 800x400px)</p>
-                        </div>
-                        <Input id="dropzone-file" type="file" className="hidden" multiple />
-                    </Label>
-                </div> 
-                <p className="font-semibold mt-6 mb-4">Current Portfolio:</p>
-                {/* In a real app, this would be a dynamic list of uploaded images with delete buttons */}
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="relative aspect-square"><img src="https://placehold.co/400x400" alt="portfolio image" className="rounded-md object-cover w-full h-full"/></div>
-                    <div className="relative aspect-square"><img src="https://placehold.co/400x400" alt="portfolio image" className="rounded-md object-cover w-full h-full"/></div>
-                    <div className="relative aspect-square"><img src="https://placehold.co/400x400" alt="portfolio image" className="rounded-md object-cover w-full h-full"/></div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Consent & Safety */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center font-headline">
+              <ShieldCheck className="mr-3" /> Consent Settings
+            </CardTitle>
+            <CardDescription>Your consent for different shoot types.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p>Bikini Shoots: <Badge variant={model.consentBikini ? "default" : "outline"}>{model.consentBikini ? 'Consented' : 'Not Consented'}</Badge></p>
+            <p>Semi-Nude Shoots: <Badge variant={model.consentSemiNude ? "default" : "outline"}>{model.consentSemiNude ? 'Consented' : 'Not Consented'}</Badge></p>
+            <p>Nude Shoots: <Badge variant={model.consentNude ? "default" : "outline"}>{model.consentNude ? 'Consented' : 'Not Consented'}</Badge></p>
+          </CardContent>
+        </Card>
+      </div>
+
+       <Separator className="my-8" />
+       
+        <div>
+            <h2 className="text-3xl font-headline font-bold mb-6">Portfolio</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {model.portfolioImages.map((src, index) => (
+                <div key={index} className="relative aspect-[3/4] w-full group">
+                  <Image
+                    src={src}
+                    alt={`Portfolio image ${index + 1} for ${model.name}`}
+                    data-ai-hint="portfolio shot"
+                    fill
+                    className="object-cover rounded-lg transition-transform duration-300 group-hover:scale-105"
+                  />
                 </div>
-            </CardContent>
-            <CardFooter>
-              <Button>Update Portfolio</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              ))}
+            </div>
+          </div>
     </div>
   );
 }

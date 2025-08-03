@@ -1,25 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ModelCard } from '@/components/model-card';
 import { SearchFilters } from '@/components/search-filters';
-import { models as allModels, type Model } from '@/lib/mock-data';
+import { Model } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
+import { getModels } from '@/lib/data-actions';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SearchPage() {
-  const [filteredModels, setFilteredModels] = useState<Model[]>(allModels);
+  const [allModels, setAllModels] = useState<Model[]>([]);
+  const [filteredModels, setFilteredModels] = useState<Model[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Note: Filtering logic is mocked for demonstration.
-  // In a real app, this would perform actual filtering based on the 'filters' object.
+  useEffect(() => {
+    async function loadModels() {
+      setLoading(true);
+      const models = await getModels();
+      setAllModels(models);
+      setFilteredModels(models);
+      setLoading(false);
+    }
+    loadModels();
+  }, []);
+
   const handleFilterChange = (filters: any) => {
     console.log('Applying filters:', filters);
-    // Example of filtering logic:
-    // let newFilteredModels = allModels;
-    // if(filters.location) { ... }
-    // setFilteredModels(newFilteredModels);
+    let newFilteredModels = allModels;
+
+    if (filters.location) {
+        newFilteredModels = newFilteredModels.filter(model => model.location.toLowerCase().includes(filters.location.toLowerCase()));
+    }
+    if (filters.height) {
+        newFilteredModels = newFilteredModels.filter(model => model.height >= parseInt(filters.height, 10));
+    }
+    if (filters.experience && filters.experience !== 'Any') {
+        newFilteredModels = newFilteredModels.filter(model => model.experience === filters.experience);
+    }
+    if (filters.availability && filters.availability !== 'any') {
+        newFilteredModels = newFilteredModels.filter(model => model.availability === filters.availability);
+    }
     
-    // For now, just shuffling for visual feedback
-    setFilteredModels([...allModels].sort(() => Math.random() - 0.5));
+    setFilteredModels(newFilteredModels);
   };
 
   return (
@@ -33,10 +55,14 @@ export default function SearchPage() {
             <h1 className="text-2xl font-headline font-bold">
               Search Results
             </h1>
-            <p className="text-muted-foreground">{filteredModels.length} models found</p>
+            {!loading && <p className="text-muted-foreground">{filteredModels.length} models found</p>}
           </div>
           <Separator className="mb-8" />
-          {filteredModels.length > 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+                {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[500px] w-full" />)}
+            </div>
+          ) : filteredModels.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
               {filteredModels.map((model) => (
                 <ModelCard key={model.id} model={model} />
