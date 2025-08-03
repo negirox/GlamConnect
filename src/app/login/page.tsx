@@ -116,9 +116,6 @@ export default function LoginPage() {
                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Login
               </Button>
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="#">Login with Google</Link>
-              </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
