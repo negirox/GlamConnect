@@ -73,7 +73,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     { icon: Venus, label: 'Gender', value: model.genderIdentity || 'N/A' },
     { icon: Cake, label: 'Born', value: model.dateOfBirth || 'N/A' },
     { icon: Flag, label: 'Nationality', value: model.nationality || 'N/A' },
-    { icon: Languages, label: 'Languages', value: model.spokenLanguages?.join(', ') || 'N/A'},
+    { icon: Languages, label: 'Languages', value: Array.isArray(model.spokenLanguages) ? model.spokenLanguages.join(', ') : model.spokenLanguages || 'N/A'},
   ];
   
   const socialLinks = model.socialLinks || [];
@@ -150,7 +150,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                     <div className="space-y-2 pl-7">
                         <p><span className="font-semibold">Level:</span> {model.experience} ({model.yearsOfExperience || 0} years)</p>
                         {model.agencyRepresented && <p><span className="font-semibold">Agency:</span> {model.agencyName}</p>}
-                        {model.previousClients && <p><span className="font-semibold">Previous Clients:</span> {model.previousClients}</p>}
+                        {Array.isArray(model.previousClients) && model.previousClients.length > 0 && <p><span className="font-semibold">Previous Clients:</span> {model.previousClients.join(', ')}</p>}
                     </div>
                 </div>
                <Separator className="my-6" />
@@ -159,13 +159,13 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                    <div className="pl-7">
                         <p className="font-semibold mb-2">Work Types:</p>
                         <div className="flex flex-wrap gap-2">
-                          {model.modelingWork && model.modelingWork.length > 0 ? model.modelingWork.map((work, i) => (
+                          {Array.isArray(model.modelingWork) && model.modelingWork.length > 0 ? model.modelingWork.map((work, i) => (
                             <Badge key={i} variant="secondary">{work.trim()}</Badge>
                           )) : <p className="text-sm text-muted-foreground">Not specified.</p>}
                         </div>
                         <p className="font-semibold mt-4 mb-2">Skills:</p>
                         <div className="flex flex-wrap gap-2">
-                          {model.skills && model.skills.length > 0 ? model.skills.map((skill, i) => (
+                          {Array.isArray(model.skills) && model.skills.length > 0 ? model.skills.map((skill, i) => (
                             <Badge key={i} variant="secondary">{skill.trim()}</Badge>
                           )): <p className="text-sm text-muted-foreground">Not specified.</p>}
                         </div>
@@ -177,7 +177,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                      <div className="space-y-2 pl-7">
                         <p><span className="font-semibold">Booking Status:</span> {model.availableForBookings ? "Available" : "Not Available"}</p>
                         <p><span className="font-semibold">Travel:</span> {model.willingToTravel ? `Yes (${model.preferredRegions || 'Any'})` : 'No'}</p>
-                        <p><span className="font-semibold">Availability:</span> {model.availability} ({model.timeAvailability?.join(', ')})</p>
+                        <p><span className="font-semibold">Availability:</span> {model.availability} ({Array.isArray(model.timeAvailability) ? model.timeAvailability.join(', ') : ''})</p>
                      </div>
                 </div>
             </CardContent>

@@ -55,7 +55,7 @@ function readModels(): { headers: string[], models: Model[] } {
         } else if ([
             'portfolioImages', 'skills', 'socialLinks', 'bikiniPortfolioImages', 
             'semiNudePortfolioImages', 'nudePortfolioImages', 'spokenLanguages', 
-            'modelingWork', 'timeAvailability'
+            'modelingWork', 'timeAvailability', 'previousClients'
         ].includes(header)) {
             (obj as any)[header] = value ? value.split(';').map(s => s.trim()) : [];
         } else {
@@ -139,7 +139,7 @@ export async function createModelForUser(modelData: Partial<Model>) {
         experience: 'New Face',
         yearsOfExperience: 0,
         modelingWork: [],
-        previousClients: '',
+        previousClients: [],
         agencyRepresented: false,
         agencyName: '',
         portfolioLink: '',
