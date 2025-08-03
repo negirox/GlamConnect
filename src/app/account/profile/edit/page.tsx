@@ -38,7 +38,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { getSession } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
-import { revalidatePath } from "next/cache";
 
 
 const profileSchema = z.object({
