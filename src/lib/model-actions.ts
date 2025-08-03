@@ -8,23 +8,30 @@ import { revalidatePath } from 'next/cache';
 
 const csvFilePath = path.join(process.cwd(), 'public', 'models.csv');
 
+const ALL_MODEL_HEADERS = ['id', 'name', 'email', 'location', 'locationPrefs', 'bio', 'height', 'weight', 'bust', 'waist', 'hips', 'shoeSize', 'eyeColor', 'hairColor', 'ethnicity', 'tattoos', 'piercings', 'experience', 'availability', 'portfolioImages', 'profilePicture', 'skills', 'socialLinks', 'consentBikini', 'consentSemiNude', 'consentNude', 'bikiniPortfolioImages', 'semiNudePortfolioImages', 'nudePortfolioImages'];
+
 // Helper to read and parse the CSV
 function readModels(): { headers: string[], models: Model[] } {
+  if (!fs.existsSync(csvFilePath)) {
+    fs.writeFileSync(csvFilePath, ALL_MODEL_HEADERS.join(',') + '\n', 'utf-8');
+  }
+
   const csvData = fs.readFileSync(csvFilePath, 'utf-8');
   const lines = csvData.trim().split('\n');
-  if (lines.length < 1) return { headers: [], models: [] };
+  
+  if (lines.length === 0 || lines[0].trim() === '') {
+     fs.writeFileSync(csvFilePath, ALL_MODEL_HEADERS.join(',') + '\n', 'utf-8');
+     return { headers: ALL_MODEL_HEADERS, models: [] };
+  }
 
   const headers = lines[0].split(',').map(h => h.trim());
-   if (headers.length === 0 || headers[0] === '' || lines.length === 1) {
-      return { headers: headers.length > 0 && headers[0] !== '' ? headers : ['id', 'name', 'email', 'location', 'locationPrefs', 'bio', 'height', 'weight', 'bust', 'waist', 'hips', 'shoeSize', 'eyeColor', 'hairColor', 'ethnicity', 'tattoos', 'piercings', 'experience', 'availability', 'portfolioImages', 'profilePicture', 'skills', 'socialLinks', 'consentBikini', 'consentSemiNude', 'consentNude', 'bikiniPortfolioImages', 'semiNudePortfolioImages', 'nudePortfolioImages'], models: [] };
-  }
-  
   const models = lines.slice(1).map(line => {
+    if(line.trim() === '') return null;
     const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
     const entry = headers.reduce((obj, header, index) => {
-        let value = values[index] ? values[index].trim().replace(/"/g, '') : '';
+        let value = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
          if (['height', 'bust', 'waist', 'hips', 'shoeSize', 'weight'].includes(header)) {
-            (obj as any)[header] = value ? parseInt(value, 10) : null;
+            (obj as any)[header] = value ? parseInt(value, 10) : undefined;
         } else if (['tattoos', 'piercings', 'consentBikini', 'consentSemiNude', 'consentNude'].includes(header)) {
             (obj as any)[header] = value.toLowerCase() === 'true';
         } else if (['portfolioImages', 'skills', 'socialLinks', 'bikiniPortfolioImages', 'semiNudePortfolioImages', 'nudePortfolioImages'].includes(header)) {
@@ -35,29 +42,30 @@ function readModels(): { headers: string[], models: Model[] } {
         return obj;
     }, {} as Model);
     return entry;
-  });
+  }).filter(m => m !== null) as Model[];
 
-  return { headers, models };
+  return { headers: ALL_MODEL_HEADERS, models };
 }
 
 // Helper to write data back to CSV
-function writeModels(headers: string[], models: Model[]) {
-    const headerString = headers.join(',');
+function writeModels(models: Model[]) {
+    const headerString = ALL_MODEL_HEADERS.join(',');
     const rows = models.map(model => {
-        return headers.map(header => {
+        return ALL_MODEL_HEADERS.map(header => {
             const key = header as keyof Model;
             let value = model[key];
 
             if (Array.isArray(value)) {
-                return `"${value ? value.join(';') : ''}"`;
+                return `"${value.join(';')}"`;
             }
-            if (typeof value === 'string' && value.includes(',')) {
-                return `"${value}"`;
-            }
-            if (value === null || value === undefined) {
+             if (value === null || value === undefined) {
                 return '';
             }
-            return String(value);
+            let stringValue = String(value);
+            if (stringValue.includes(',')) {
+                return `"${stringValue}"`;
+            }
+            return stringValue;
         }).join(',');
     });
 
@@ -70,7 +78,7 @@ export async function createModelForUser(modelData: Partial<Model>) {
         throw new Error("Cannot create a model profile with missing id, email or name.");
     }
     
-    const { headers, models } = readModels();
+    const { models } = readModels();
 
     const existingModel = models.find(m => m.email === modelData.email);
     if (existingModel) {
@@ -110,7 +118,7 @@ export async function createModelForUser(modelData: Partial<Model>) {
     };
     
     models.push(defaultModel);
-    writeModels(headers, models);
+    writeModels(models);
     
     revalidatePath('/account/profile');
     return { success: true, message: 'Model profile created successfully.' };
@@ -119,7 +127,7 @@ export async function createModelForUser(modelData: Partial<Model>) {
 
 export async function updateModel(id: string, updatedData: Partial<Model>) {
     try {
-        const { headers, models } = readModels();
+        const { models } = readModels();
         
         const modelIndex = models.findIndex(m => m.id === id);
         if (modelIndex === -1) {
@@ -129,7 +137,7 @@ export async function updateModel(id: string, updatedData: Partial<Model>) {
         const updatedModel = { ...models[modelIndex], ...updatedData };
         models[modelIndex] = updatedModel;
         
-        writeModels(headers, models);
+        writeModels(models);
 
         revalidatePath('/account/profile');
         revalidatePath(`/profile/${id}`);

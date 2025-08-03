@@ -29,14 +29,10 @@ function readUsers(): { headers: string[], users: User[] } {
   
   const csvData = fs.readFileSync(usersCsvFilePath, 'utf-8');
   const lines = csvData.trim().split('\n');
-  if (lines.length < 1) return { headers: ['id', 'name', 'email', 'password', 'role'], users: [] };
-
-  const headers = lines[0].split(',').map(h => h.trim());
-  if (headers.length === 0 || headers[0] === '') {
-      return { headers: ['id', 'name', 'email', 'password', 'role'], users: [] };
-  }
+  const headers = (lines.length > 0 && lines[0].trim() !== '') ? lines[0].split(',').map(h => h.trim()) : ['id', 'name', 'email', 'password', 'role'];
   
   const users = lines.slice(1).map(line => {
+    if(line.trim() === '') return null;
     const values = line.split(',');
     return {
       id: values[0],
@@ -45,7 +41,7 @@ function readUsers(): { headers: string[], users: User[] } {
       password: values[3],
       role: values[4],
     } as User;
-  });
+  }).filter(u => u !== null) as User[];
 
   return { headers, users };
 }
@@ -57,7 +53,7 @@ function writeUsers(headers: string[], users: User[]) {
         return [user.id, user.name, user.email, user.password, user.role].join(',');
     });
 
-    const csvString = [headerString, ...rows].join('\n');
+    const csvString = [headerString, ...rows].join('\n') + '\n';
     fs.writeFileSync(usersCsvFilePath, csvString, 'utf-8');
 }
 
@@ -104,8 +100,6 @@ export async function createUser(userData: z.infer<typeof signupSchema>) {
 export async function getUser(email: string) {
     // This is a placeholder. In a real app, you'd fetch user data.
     console.log(`Pretending to fetch user for email: ${email}`);
-    return {
-        name: 'Test User',
-        email,
-    }
+    const { users } = readUsers();
+    return users.find(u => u.email === email);
 }
