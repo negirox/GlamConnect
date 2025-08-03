@@ -16,7 +16,7 @@ function parseCSV(csv: string): Model[] {
     const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // handle commas inside quotes
     const entry = headers.reduce(
       (obj, header, index) => {
-        let value = values[index] ? values[index].trim().replace(/"/g, '') : '';
+        let value = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
 
         if (
           [
@@ -26,18 +26,27 @@ function parseCSV(csv: string): Model[] {
             'hips',
             'shoeSize',
             'weight',
+            'yearsOfExperience',
+            'hourlyRate',
+            'dayRate',
           ].includes(header)
         ) {
-          (obj as any)[header] = value ? parseInt(value, 10) : null;
-        } else if (['tattoos', 'piercings', 'consentBikini', 'consentSemiNude', 'consentNude'].includes(header)) {
+          (obj as any)[header] = value ? parseInt(value, 10) : undefined;
+        } else if (['tattoos', 'piercings', 'consentBikini', 'consentSemiNude', 'consentNude', 'braces', 'agencyRepresented', 'availableForBookings', 'willingToTravel', 'tfp'].includes(header)) {
           (obj as any)[header] = value.toLowerCase() === 'true';
         } else if (
-          header === 'portfolioImages' ||
-          header === 'skills' ||
-          header === 'socialLinks' ||
-          header === 'bikiniPortfolioImages' ||
-          header === 'semiNudePortfolioImages' ||
-          header === 'nudePortfolioImages'
+          [
+            'portfolioImages', 
+            'skills', 
+            'socialLinks', 
+            'bikiniPortfolioImages', 
+            'semiNudePortfolioImages', 
+            'nudePortfolioImages',
+            'spokenLanguages',
+            'modelingWork',
+            'timeAvailability',
+            'previousClients'
+          ].includes(header)
         ) {
           (obj as any)[header] = value ? value.split(';').map(s => s.trim()) : [];
         } else {

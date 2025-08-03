@@ -8,7 +8,19 @@ import { revalidatePath } from 'next/cache';
 
 const csvFilePath = path.join(process.cwd(), 'public', 'models.csv');
 
-const ALL_MODEL_HEADERS = ['id', 'name', 'email', 'location', 'locationPrefs', 'bio', 'height', 'weight', 'bust', 'waist', 'hips', 'shoeSize', 'eyeColor', 'hairColor', 'ethnicity', 'tattoos', 'piercings', 'experience', 'availability', 'portfolioImages', 'profilePicture', 'skills', 'socialLinks', 'consentBikini', 'consentSemiNude', 'consentNude', 'bikiniPortfolioImages', 'semiNudePortfolioImages', 'nudePortfolioImages'];
+const ALL_MODEL_HEADERS = [
+    'id', 'name', 'email', 'location', 'locationPrefs', 'bio', 'genderIdentity', 
+    'dateOfBirth', 'nationality', 'spokenLanguages', 'height', 'weight', 'bust', 
+    'waist', 'hips', 'cupSize', 'skinTone', 'dressSize', 'shoeSize', 'eyeColor', 
+    'hairColor', 'ethnicity', 'tattoos', 'tattoosDescription', 'piercings', 
+    'piercingsDescription', 'scars', 'braces', 'experience', 'yearsOfExperience', 
+    'modelingWork', 'previousClients', 'agencyRepresented', 'agencyName', 
+    'portfolioLink', 'availability', 'availableForBookings', 'willingToTravel', 
+    'preferredRegions', 'timeAvailability', 'hourlyRate', 'dayRate', 'tfp', 
+    'portfolioImages', 'profilePicture', 'skills', 'socialLinks', 'consentBikini', 
+    'consentSemiNude', 'consentNude', 'bikiniPortfolioImages', 
+    'semiNudePortfolioImages', 'nudePortfolioImages', 'verificationStatus'
+];
 
 // Helper to read and parse the CSV
 function readModels(): { headers: string[], models: Model[] } {
@@ -30,11 +42,21 @@ function readModels(): { headers: string[], models: Model[] } {
     const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
     const entry = headers.reduce((obj, header, index) => {
         let value = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
-         if (['height', 'bust', 'waist', 'hips', 'shoeSize', 'weight'].includes(header)) {
+         if ([
+            'height', 'bust', 'waist', 'hips', 'shoeSize', 'weight', 
+            'yearsOfExperience', 'hourlyRate', 'dayRate'
+        ].includes(header)) {
             (obj as any)[header] = value ? parseInt(value, 10) : undefined;
-        } else if (['tattoos', 'piercings', 'consentBikini', 'consentSemiNude', 'consentNude'].includes(header)) {
+        } else if ([
+            'tattoos', 'piercings', 'consentBikini', 'consentSemiNude', 'consentNude', 
+            'braces', 'agencyRepresented', 'availableForBookings', 'willingToTravel', 'tfp'
+        ].includes(header)) {
             (obj as any)[header] = value.toLowerCase() === 'true';
-        } else if (['portfolioImages', 'skills', 'socialLinks', 'bikiniPortfolioImages', 'semiNudePortfolioImages', 'nudePortfolioImages'].includes(header)) {
+        } else if ([
+            'portfolioImages', 'skills', 'socialLinks', 'bikiniPortfolioImages', 
+            'semiNudePortfolioImages', 'nudePortfolioImages', 'spokenLanguages', 
+            'modelingWork', 'timeAvailability', 'previousClients'
+        ].includes(header)) {
             (obj as any)[header] = value ? value.split(';').map(s => s.trim()) : [];
         } else {
             (obj as any)[header] = value;
@@ -92,19 +114,43 @@ export async function createModelForUser(modelData: Partial<Model>) {
         location: '',
         locationPrefs: '',
         bio: '',
+        genderIdentity: '',
+        dateOfBirth: '',
+        nationality: '',
+        spokenLanguages: [],
         height: 0,
         weight: undefined,
         bust: 0,
         waist: 0,
         hips: 0,
         shoeSize: 0,
+        cupSize: '',
+        skinTone: '',
+        dressSize: '',
         eyeColor: '',
         hairColor: '',
         ethnicity: '',
         tattoos: false,
+        tattoosDescription: '',
         piercings: false,
+        piercingsDescription: '',
+        scars: '',
+        braces: false,
         experience: 'New Face',
+        yearsOfExperience: 0,
+        modelingWork: [],
+        previousClients: [],
+        agencyRepresented: false,
+        agencyName: '',
+        portfolioLink: '',
         availability: 'By Project',
+        availableForBookings: false,
+        willingToTravel: false,
+        preferredRegions: '',
+        timeAvailability: [],
+        hourlyRate: undefined,
+        dayRate: undefined,
+        tfp: false,
         portfolioImages: ['https://placehold.co/600x800.png'],
         profilePicture: 'https://placehold.co/600x800.png',
         skills: [],
@@ -115,6 +161,7 @@ export async function createModelForUser(modelData: Partial<Model>) {
         bikiniPortfolioImages: [],
         semiNudePortfolioImages: [],
         nudePortfolioImages: [],
+        verificationStatus: 'Not Verified',
     };
     
     models.push(defaultModel);

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2, CircleCheck, CircleX, Trash2 } from "lucide-react";
+import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, ShieldCheck, AlertTriangle, Loader2, CircleCheck, CircleX, Trash2, HelpCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState, useEffect } from "react";
@@ -40,6 +40,7 @@ import { getSession } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const MAX_FILE_SIZE_MB = 2;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -64,6 +65,10 @@ const profileSchema = z.object({
     location: z.string().min(1, 'Location is required'),
     locationPrefs: z.string().optional(),
     bio: z.string().optional(),
+    genderIdentity: z.string().optional(),
+    dateOfBirth: z.string().optional(),
+    nationality: z.string().optional(),
+    spokenLanguages: z.string().optional(),
 });
 const attributesSchema = z.object({
     height: z.coerce.number().positive(),
@@ -75,14 +80,34 @@ const attributesSchema = z.object({
     eyeColor: z.string(),
     hairColor: z.string(),
     ethnicity: z.string().optional(),
+    cupSize: z.string().optional(),
+    skinTone: z.string().optional(),
+    dressSize: z.string().optional(),
     tattoos: z.boolean().optional(),
+    tattoosDescription: z.string().optional(),
     piercings: z.boolean().optional(),
+    piercingsDescription: z.string().optional(),
+    scars: z.string().optional(),
+    braces: z.boolean().optional(),
 });
 const professionalSchema = z.object({
     socialLinks: z.string().optional(),
     experience: z.string(),
     skills: z.string().optional(),
     availability: z.string(),
+    yearsOfExperience: z.coerce.number().optional(),
+    modelingWork: z.array(z.string()).optional(),
+    previousClients: z.string().optional(),
+    agencyRepresented: z.boolean().optional(),
+    agencyName: z.string().optional(),
+    portfolioLink: z.string().url().optional().or(z.literal('')),
+    availableForBookings: z.boolean().optional(),
+    willingToTravel: z.boolean().optional(),
+    preferredRegions: z.string().optional(),
+    timeAvailability: z.array(z.string()).optional(),
+    hourlyRate: z.coerce.number().optional(),
+    dayRate: z.coerce.number().optional(),
+    tfp: z.boolean().optional(),
 });
 
 export default function ProfileManagementPage() {
@@ -170,17 +195,22 @@ export default function ProfileManagementPage() {
     }));
     
     try {
-        if (isMultiple) {
+      const oldImagePathsToDelete: string[] = [];
+      if (isMultiple) {
           const oldImages = model[field] as string[] | undefined;
-          if (Array.isArray(oldImages) && oldImages.length > 0) {
-              await Promise.all(oldImages.map(img => deleteImage(img)));
+          if (Array.isArray(oldImages)) {
+              oldImagePathsToDelete.push(...oldImages);
           }
-        } else if (!isMultiple && filesToUpload.length > 0) { // Only delete if we are actually uploading a new single image
-           const oldImage = model[field] as string | undefined;
+      } else {
+          const oldImage = model[field] as string | undefined;
           if (typeof oldImage === 'string' && oldImage) {
-              await deleteImage(oldImage);
+              oldImagePathsToDelete.push(oldImage);
           }
-        }
+      }
+
+      if (oldImagePathsToDelete.length > 0) {
+          await Promise.all(oldImagePathsToDelete.map(img => deleteImage(img)));
+      }
 
       const uploadPromises = filesToUpload.map(async (uploadableFile) => {
           setUploadDialog(prev => ({
@@ -200,11 +230,7 @@ export default function ProfileManagementPage() {
 
       results.forEach(result => {
          if (result.status === 'rejected') {
-            // This case should ideally not happen if server actions are set up correctly, but it's good practice to handle it.
-            // You might want to find which file it corresponds to if possible, though it's hard without an ID.
             console.error("An upload promise was rejected:", result.reason);
-            // Since we can't identify the file, we can't update its status easily.
-            // The user might see it stuck in "uploading". A more complex mapping would be needed for production.
             return;
          }
 
@@ -221,7 +247,6 @@ export default function ProfileManagementPage() {
           }
       });
       
-      // Update dialog state once after all uploads are processed
       setUploadDialog(prev => ({...prev, files: finalFilesState}));
 
 
@@ -267,13 +292,17 @@ export default function ProfileManagementPage() {
     if (!model) return;
 
     setIsSubmitting(prev => ({...prev, [tab]: true}));
-
-    if (data.skills && typeof data.skills === 'string') data.skills = data.skills.split(',').map((s: string) => s.trim());
-    if (data.socialLinks && typeof data.socialLinks === 'string') data.socialLinks = data.socialLinks.split(',').map((s: string) => s.trim());
-
+    
+    const fieldsToSplit = ['skills', 'socialLinks', 'spokenLanguages', 'previousClients'];
+    fieldsToSplit.forEach(field => {
+      if (data[field] && typeof data[field] === 'string') {
+        data[field] = data[field].split(',').map((s: string) => s.trim()).filter(Boolean);
+      }
+    });
+    
     try {
       await updateModel(model.id, data);
-      await fetchModel();
+      await fetchModel(); 
       toast({
         title: "Profile Updated",
         description: `Your ${tab} information has been saved.`,
@@ -313,6 +342,27 @@ export default function ProfileManagementPage() {
     }
   }
 
+    const handleVerificationRequest = async () => {
+        if (!model) return;
+        setIsSubmitting(prev => ({...prev, verification: true}));
+        try {
+            await updateModel(model.id, { verificationStatus: 'Pending' });
+            await fetchModel();
+            toast({
+                title: "Request Sent",
+                description: "Your verification request has been submitted to the admin.",
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to send verification request.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmitting(prev => ({...prev, verification: false}));
+        }
+    }
+
   const basicInfoForm = useForm({
     resolver: zodResolver(profileSchema),
     values: model ? { 
@@ -320,6 +370,10 @@ export default function ProfileManagementPage() {
         location: model.location,
         bio: model.bio || '',
         locationPrefs: model.locationPrefs || '',
+        genderIdentity: model.genderIdentity || '',
+        dateOfBirth: model.dateOfBirth || '',
+        nationality: model.nationality || '',
+        spokenLanguages: Array.isArray(model.spokenLanguages) ? model.spokenLanguages.join(', ') : model.spokenLanguages || '',
     } : undefined,
   });
 
@@ -335,18 +389,39 @@ export default function ProfileManagementPage() {
         eyeColor: model.eyeColor,
         hairColor: model.hairColor,
         ethnicity: model.ethnicity || '',
+        cupSize: model.cupSize || '',
+        skinTone: model.skinTone || '',
+        dressSize: model.dressSize || '',
         tattoos: model.tattoos || false,
+        tattoosDescription: model.tattoosDescription || '',
         piercings: model.piercings || false,
+        piercingsDescription: model.piercingsDescription || '',
+        scars: model.scars || '',
+        braces: model.braces || false,
       } : undefined
   })
 
   const professionalForm = useForm({
       resolver: zodResolver(professionalSchema),
       values: model ? {
-          socialLinks: model.socialLinks?.join(', ') || '',
+          socialLinks: Array.isArray(model.socialLinks) ? model.socialLinks.join(', ') : model.socialLinks || '',
           experience: model.experience,
-          skills: model.skills?.join(', ') || '',
+          skills: Array.isArray(model.skills) ? model.skills.join(', ') : model.skills || '',
           availability: model.availability,
+          yearsOfExperience: model.yearsOfExperience || 0,
+          modelingWork: model.modelingWork || [],
+          previousClients: Array.isArray(model.previousClients) ? model.previousClients.join(', ') : model.previousClients || '',
+          agencyRepresented: model.agencyRepresented || false,
+          agencyName: model.agencyName || '',
+          portfolioLink: model.portfolioLink || '',
+          availableForBookings: model.availableForBookings || false,
+          willingToTravel: model.willingToTravel || false,
+          preferredRegions: model.preferredRegions || '',
+          timeAvailability: model.timeAvailability || [],
+          hourlyRate: model.hourlyRate,
+          dayRate: model.dayRate,
+          tfp: model.tfp || false,
+
       } : undefined,
   })
 
@@ -376,7 +451,7 @@ export default function ProfileManagementPage() {
   const hasPendingFiles = uploadDialog.files.some(f => f.status === 'pending');
 
   return (
-    <>
+    <TooltipProvider>
     <Dialog open={uploadDialog.isOpen} onOpenChange={(isOpen) => !uploadInProgress && !isOpen && setUploadDialog(prev => ({...prev, isOpen: false}))}>
       <DialogContent>
         <DialogHeader>
@@ -456,15 +531,53 @@ export default function ProfileManagementPage() {
                         </Button>
                     </div>
                  </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" {...basicInfoForm.register('name')} />
-                   {basicInfoForm.formState.errors.name && <p className="text-sm text-destructive">{basicInfoForm.formState.errors.name.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input id="location" {...basicInfoForm.register('location')} />
-                   {basicInfoForm.formState.errors.location && <p className="text-sm text-destructive">{basicInfoForm.formState.errors.location.message}</p>}
+                <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input id="name" {...basicInfoForm.register('name')} />
+                       {basicInfoForm.formState.errors.name && <p className="text-sm text-destructive">{basicInfoForm.formState.errors.name.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Location (City, Country)</Label>
+                      <Input id="location" {...basicInfoForm.register('location')} />
+                       {basicInfoForm.formState.errors.location && <p className="text-sm text-destructive">{basicInfoForm.formState.errors.location.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="dob">Date of Birth</Label>
+                        <Input id="dob" type="date" {...basicInfoForm.register('dateOfBirth')} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Gender Identity</Label>
+                        <Controller
+                            name="genderIdentity"
+                            control={basicInfoForm.control}
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Female">Female</SelectItem>
+                                    <SelectItem value="Male">Male</SelectItem>
+                                    <SelectItem value="Non-binary">Non-binary</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                    <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            )}
+                        />
+                    </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="nationality">Nationality</Label>
+                      <Input id="nationality" {...basicInfoForm.register('nationality')} />
+                    </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="languages" className="flex items-center gap-2">Spoken Languages 
+                        <Tooltip>
+                            <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-muted-foreground" /></TooltipTrigger>
+                            <TooltipContent><p>Enter languages separated by commas</p></TooltipContent>
+                        </Tooltip>
+                      </Label>
+                      <Input id="languages" {...basicInfoForm.register('spokenLanguages')} />
+                    </div>
                 </div>
                  <div className="space-y-2">
                   <Label htmlFor="location-prefs">Location Preferences</Label>
@@ -519,6 +632,18 @@ export default function ProfileManagementPage() {
                             <Input id="hips" type="number" {...attributesForm.register('hips')} />
                              {attributesForm.formState.errors.hips && <p className="text-sm text-destructive">{attributesForm.formState.errors.hips.message}</p>}
                         </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="cupSize">Cup Size</Label>
+                            <Input id="cupSize" {...attributesForm.register('cupSize')} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="skinTone">Skin Tone</Label>
+                            <Input id="skinTone" {...attributesForm.register('skinTone')} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="dressSize">Dress Size</Label>
+                            <Input id="dressSize" {...attributesForm.register('dressSize')} />
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="shoe">Shoe Size (EU)</Label>
                             <Input id="shoe" type="number" {...attributesForm.register('shoeSize')} />
@@ -568,24 +693,52 @@ export default function ProfileManagementPage() {
                             <Label htmlFor="ethnicity">Ethnicity</Label>
                             <Input id="ethnicity" placeholder="e.g. Caucasian" {...attributesForm.register('ethnicity')} />
                         </div>
-                        <div className="space-y-4 pt-2">
-                            <Label>Tattoos/Piercings</Label>
-                            <div className="flex items-center space-x-2">
-                                <Controller
-                                    name="tattoos"
-                                    control={attributesForm.control}
-                                    render={({ field }) => <Checkbox id="tattoos" checked={field.value} onCheckedChange={field.onChange} />}
-                                />
-                                <Label htmlFor="tattoos">Tattoos</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Controller
-                                    name="piercings"
-                                    control={attributesForm.control}
-                                    render={({ field }) => <Checkbox id="piercings" checked={field.value} onCheckedChange={field.onChange} />}
-                                />
-                                <Label htmlFor="piercings">Piercings</Label>
-                            </div>
+                        <div className="col-span-2 grid grid-cols-2 gap-6">
+                           <div className="space-y-4 pt-2">
+                                <Label>Distinctive Features</Label>
+                                <div className="flex items-center space-x-2">
+                                    <Controller
+                                        name="tattoos"
+                                        control={attributesForm.control}
+                                        render={({ field }) => <Checkbox id="tattoos" checked={field.value} onCheckedChange={field.onChange} />}
+                                    />
+                                    <Label htmlFor="tattoos">Tattoos</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Controller
+                                        name="piercings"
+                                        control={attributesForm.control}
+                                        render={({ field }) => <Checkbox id="piercings" checked={field.value} onCheckedChange={field.onChange} />}
+                                    />
+                                    <Label htmlFor="piercings">Piercings</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Controller
+                                        name="braces"
+                                        control={attributesForm.control}
+                                        render={({ field }) => <Checkbox id="braces" checked={field.value} onCheckedChange={field.onChange} />}
+                                    />
+                                    <Label htmlFor="braces">Braces / Retainers</Label>
+                                </div>
+                           </div>
+                           <div className="space-y-2">
+                                {attributesForm.watch('tattoos') && (
+                                     <div className="space-y-2">
+                                        <Label htmlFor="tattoosDescription">Tattoo Description</Label>
+                                        <Input id="tattoosDescription" {...attributesForm.register('tattoosDescription')} placeholder="e.g., Sleeve on left arm" />
+                                     </div>
+                                )}
+                                {attributesForm.watch('piercings') && (
+                                     <div className="space-y-2">
+                                        <Label htmlFor="piercingsDescription">Piercing Description</Label>
+                                        <Input id="piercingsDescription" {...attributesForm.register('piercingsDescription')} placeholder="e.g., Nose ring" />
+                                     </div>
+                                )}
+                                <div className="space-y-2">
+                                    <Label htmlFor="scars">Scars / Birthmarks (optional)</Label>
+                                    <Input id="scars" {...attributesForm.register('scars')} />
+                                </div>
+                           </div>
                         </div>
                     </CardContent>
                     <CardFooter className="gap-2">
@@ -635,40 +788,98 @@ export default function ProfileManagementPage() {
                 <CardHeader>
                 <CardTitle className="font-headline">Professional Details</CardTitle>
                 <CardDescription>
-                    Add your social media, experience, and availability to attract brands.
+                    Add your experience, availability, and rates to attract brands.
                 </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                        <Label>Social Links</Label>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label>Experience Level</Label>
+                             <Controller
+                                name="experience"
+                                control={professionalForm.control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select your experience level" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="New Face">New Face</SelectItem>
+                                        <SelectItem value="Experienced">Experienced</SelectItem>
+                                        <SelectItem value="Expert">Expert</SelectItem>
+                                    </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Years of Modeling Experience</Label>
+                            <Input type="number" {...professionalForm.register('yearsOfExperience')} />
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <Label>Types of Modeling Work Done</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                           {['Editorial', 'Commercial', 'Runway', 'Fitness', 'Swimwear', 'Semi-nude', 'Nude', 'Intimacy Photoshoot'].map(work => (
+                                <div key={work} className="flex items-center space-x-2">
+                                     <Controller
+                                        name="modelingWork"
+                                        control={professionalForm.control}
+                                        render={({ field }) => {
+                                            return <Checkbox
+                                                checked={field.value?.includes(work)}
+                                                onCheckedChange={(checked) => {
+                                                    return checked
+                                                        ? field.onChange([...(field.value || []), work])
+                                                        : field.onChange(field.value?.filter((value) => value !== work))
+                                                }}
+                                            />
+                                        }}
+                                    />
+                                    <Label htmlFor={work} className="font-normal">{work}</Label>
+                                </div>
+                           ))}
+                        </div>
+                    </div>
+                     <div className="space-y-2">
+                        <Label className="flex items-center gap-2">Previous Clients/Brands
+                           <Tooltip>
+                            <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-muted-foreground" /></TooltipTrigger>
+                            <TooltipContent><p>Enter client names separated by commas</p></TooltipContent>
+                           </Tooltip>
+                        </Label>
+                        <Textarea {...professionalForm.register('previousClients')} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6 items-center">
+                       <div className="flex items-center space-x-2">
+                            <Controller name="agencyRepresented" control={professionalForm.control} render={({field}) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />
+                            <Label>Represented by an Agency?</Label>
+                        </div>
+                        {professionalForm.watch('agencyRepresented') && (
+                            <div className="space-y-2">
+                                <Label>Agency Name</Label>
+                                <Input {...professionalForm.register('agencyName')} />
+                            </div>
+                        )}
+                    </div>
+                     <div className="space-y-2">
+                        <Label>External Portfolio Link (e.g., personal website)</Label>
                          <div className="flex items-center gap-2">
                             <LinkIcon className="h-4 w-4 text-muted-foreground"/>
-                            <Input id="socialLinks" placeholder="Instagram, Behance, etc. (comma-separated)" {...professionalForm.register('socialLinks')} />
+                            <Input id="portfolioLink" {...professionalForm.register('portfolioLink')} />
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label>Experience Level</Label>
-                         <Controller
-                            name="experience"
-                            control={professionalForm.control}
-                            render={({ field }) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select your experience level" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="New Face">New Face</SelectItem>
-                                    <SelectItem value="Experienced">Experienced</SelectItem>
-                                    <SelectItem value="Expert">Expert</SelectItem>
-                                </SelectContent>
-                                </Select>
-                            )}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Skills/Tags</Label>
-                        <Input id="skills" placeholder="e.g. Runway, Commercial, Editorial, Print" {...professionalForm.register('skills')} />
-                        <p className="text-xs text-muted-foreground">Separate skills with commas.</p>
+                        <Label className="flex items-center gap-2">Social Links
+                           <Tooltip>
+                                <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-muted-foreground" /></TooltipTrigger>
+                                <TooltipContent><p>Enter full URLs separated by commas</p></TooltipContent>
+                           </Tooltip>
+                        </Label>
+                         <div className="flex items-center gap-2">
+                            <LinkIcon className="h-4 w-4 text-muted-foreground"/>
+                            <Input id="socialLinks" placeholder="https://instagram.com/..., https://behance.net/..." {...professionalForm.register('socialLinks')} />
+                        </div>
                     </div>
                     <div className="space-y-3">
                         <Label>Work Availability</Label>
@@ -693,12 +904,93 @@ export default function ProfileManagementPage() {
                             )}
                         />
                     </div>
+                    <div className="grid grid-cols-2 gap-6 items-center">
+                        <div className="flex items-center space-x-2">
+                           <Controller name="availableForBookings" control={professionalForm.control} render={({field}) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />
+                           <Label>Available for Bookings</Label>
+                        </div>
+                         <div className="flex items-center space-x-2">
+                           <Controller name="willingToTravel" control={professionalForm.control} render={({field}) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />
+                           <Label>Willing to Travel</Label>
+                        </div>
+                        {professionalForm.watch('willingToTravel') && (
+                             <div className="space-y-2">
+                                <Label>Preferred Work Regions/Countries</Label>
+                                <Input {...professionalForm.register('preferredRegions')} />
+                            </div>
+                        )}
+                         <div className="space-y-2 col-span-2">
+                            <Label>Time Availability</Label>
+                            <div className="flex gap-4">
+                               <div className="flex items-center space-x-2">
+                                     <Controller
+                                        name="timeAvailability"
+                                        control={professionalForm.control}
+                                        render={({ field }) => <Checkbox
+                                            checked={field.value?.includes('Weekdays')}
+                                            onCheckedChange={(checked) => {
+                                                const current = field.value || [];
+                                                return checked ? field.onChange([...current, 'Weekdays']) : field.onChange(current.filter(v => v !== 'Weekdays'));
+                                            }}
+                                        />}
+                                    />
+                                    <Label>Weekdays</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                     <Controller
+                                        name="timeAvailability"
+                                        control={professionalForm.control}
+                                        render={({ field }) => <Checkbox
+                                            checked={field.value?.includes('Weekends')}
+                                            onCheckedChange={(checked) => {
+                                                const current = field.value || [];
+                                                return checked ? field.onChange([...current, 'Weekends']) : field.onChange(current.filter(v => v !== 'Weekends'));
+                                            }}
+                                        />}
+                                    />
+                                    <Label>Weekends</Label>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+                    <div className="space-y-4 border p-4 rounded-md">
+                        <h4 className="font-semibold">Rates (Optional/Private)</h4>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label>Hourly Rate ($)</Label>
+                                <Input type="number" {...professionalForm.register('hourlyRate')} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Half-day/Full-day Rate ($)</Label>
+                                <Input type="number" {...professionalForm.register('dayRate')} />
+                            </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                           <Controller name="tfp" control={professionalForm.control} render={({field}) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />
+                           <Label>Open to TFP (Time for Print) Shoots</Label>
+                        </div>
+                    </div>
+                     <div className="space-y-2">
+                        <Label className="flex items-center gap-2">Skills/Tags
+                           <Tooltip>
+                                <TooltipTrigger asChild><HelpCircle className="h-4 w-4 text-muted-foreground" /></TooltipTrigger>
+                                <TooltipContent><p>Enter skills separated by commas</p></TooltipContent>
+                           </Tooltip>
+                        </Label>
+                        <Input id="skills" placeholder="e.g. Runway, Commercial, Editorial, Print" {...professionalForm.register('skills')} />
+                    </div>
                     <div className="flex items-start space-x-3 rounded-md border p-4">
                         <CheckCircle className="h-5 w-5 text-green-500" />
                         <div className="space-y-1">
                             <p className="font-semibold">Verification Badge</p>
-                            <p className="text-sm text-muted-foreground">Request a manual verification to get a badge on your profile. This increases trust with brands.</p>
-                            <Button variant="outline" size="sm" className="mt-2">Request Verification</Button>
+                            <p className="text-sm text-muted-foreground">
+                                Your profile is currently <span className="font-bold">{model.verificationStatus}</span>. 
+                                Submit your profile for manual review to get a verified badge. This increases trust with brands.
+                            </p>
+                            <Button variant="outline" size="sm" className="mt-2" onClick={handleVerificationRequest} disabled={model.verificationStatus === 'Pending' || model.verificationStatus === 'Verified' || isSubmitting.verification}>
+                               {isSubmitting.verification && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                {model.verificationStatus === 'Pending' ? 'Request Pending' : model.verificationStatus === 'Verified' ? 'Verified' : 'Request Verification'}
+                            </Button>
                         </div>
                     </div>
                 </CardContent>
@@ -840,6 +1132,6 @@ export default function ProfileManagementPage() {
         </TabsContent>
       </Tabs>
     </div>
-    </>
+    </TooltipProvider>
   );
 }
