@@ -28,12 +28,15 @@ function parseCSV(csv: string): Model[] {
           ].includes(header)
         ) {
           (obj as any)[header] = value ? parseInt(value, 10) : null;
-        } else if (['tattoos', 'piercings'].includes(header)) {
+        } else if (['tattoos', 'piercings', 'consentBikini', 'consentSemiNude', 'consentNude'].includes(header)) {
           (obj as any)[header] = value.toLowerCase() === 'true';
         } else if (
           header === 'portfolioImages' ||
           header === 'skills' ||
-          header === 'socialLinks'
+          header === 'socialLinks' ||
+          header === 'bikiniPortfolioImages' ||
+          header === 'semiNudePortfolioImages' ||
+          header === 'nudePortfolioImages'
         ) {
           (obj as any)[header] = value ? value.split(';').map(s => s.trim()) : [];
         } else {

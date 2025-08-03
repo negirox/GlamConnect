@@ -21,11 +21,20 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, MapPin, BadgeCheck, Tag } from "lucide-react";
+import { Upload, User, Ruler, Camera, Link as LinkIcon, Star, CheckCircle, MapPin, BadgeCheck, Tag, ShieldCheck, AlertTriangle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function ProfileManagementPage() {
+  const [consentBikini, setConsentBikini] = useState(false);
+  const [consentSemiNude, setConsentSemiNude] = useState(false);
+  const [consentNude, setConsentNude] = useState(false);
+  const [isOver18, setIsOver18] = useState(false);
+
+  const canEnableConsent = isOver18;
+
   return (
     <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
       <div className="flex items-center mb-8">
@@ -33,11 +42,12 @@ export default function ProfileManagementPage() {
         <BadgeCheck className="ml-4 h-8 w-8 text-blue-500" />
       </div>
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-primary/80">
+        <TabsList className="grid w-full grid-cols-5 bg-primary/80">
           <TabsTrigger value="basic"><User className="mr-2 h-4 w-4"/>Basic Info</TabsTrigger>
           <TabsTrigger value="attributes"><Ruler className="mr-2 h-4 w-4"/>Attributes</TabsTrigger>
           <TabsTrigger value="portfolio"><Camera className="mr-2 h-4 w-4"/>Portfolio</TabsTrigger>
           <TabsTrigger value="professional"><Star className="mr-2 h-4 w-4"/>Professional</TabsTrigger>
+          <TabsTrigger value="consent"><ShieldCheck className="mr-2 h-4 w-4"/>Consent & Safety</TabsTrigger>
         </TabsList>
         <TabsContent value="basic">
           <Card>
@@ -157,7 +167,7 @@ export default function ProfileManagementPage() {
             <CardHeader>
               <CardTitle className="font-headline">Portfolio Showcase</CardTitle>
               <CardDescription>
-                Upload your best work. High-resolution images are recommended.
+                Upload your best work. High-resolution images are recommended. These images are publicly visible.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -264,6 +274,107 @@ export default function ProfileManagementPage() {
             </CardContent>
             <CardFooter>
               <Button>Save Professional Details</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        <TabsContent value="consent">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-headline flex items-center"><ShieldCheck className="mr-2" /> Consent & Safety</CardTitle>
+              <CardDescription>
+                Manage your consent for different types of shoots. Your safety is our priority. This content is private and only shown to verified brands after they accept your terms.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <Alert variant="destructive" className="flex items-start">
+                    <AlertTriangle className="h-5 w-5 mr-3 mt-1"/>
+                    <div>
+                        <AlertTitle>Age Verification Required</AlertTitle>
+                        <AlertDescription>
+                            You must be 18 years or older to provide consent for sensitive content shoots. Please confirm your age to proceed.
+                        </AlertDescription>
+                        <div className="flex items-center space-x-2 mt-4">
+                            <Checkbox id="age-verification" checked={isOver18} onCheckedChange={(checked) => setIsOver18(checked as boolean)} />
+                            <Label htmlFor="age-verification">I confirm I am 18 years of age or older.</Label>
+                        </div>
+                    </div>
+                </Alert>
+                
+                <div className="space-y-4 p-4 border rounded-lg" data-disabled={!canEnableConsent}>
+                    <div className="flex items-start space-x-3">
+                        <Checkbox id="consent-bikini" disabled={!canEnableConsent} checked={consentBikini} onCheckedChange={(checked) => setConsentBikini(checked as boolean)} />
+                        <div className="grid gap-1.5 leading-none">
+                            <Label htmlFor="consent-bikini" className="font-semibold">Bikini Shoots</Label>
+                            <p className="text-sm text-muted-foreground">I consent to be considered for shoots that require wearing swimwear or bikini.</p>
+                        </div>
+                    </div>
+                    {consentBikini && canEnableConsent && (
+                         <div className="pl-6 space-y-4">
+                            <p className="font-semibold">Upload Bikini Portfolio (min. 4 images)</p>
+                             <div className="flex items-center justify-center w-full">
+                                <Label htmlFor="dropzone-bikini" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
+                                        <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
+                                        <p>Click to upload or drag & drop</p>
+                                    </div>
+                                    <Input id="dropzone-bikini" type="file" className="hidden" multiple />
+                                </Label>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-4 p-4 border rounded-lg" data-disabled={!canEnableConsent}>
+                    <div className="flex items-start space-x-3">
+                        <Checkbox id="consent-semi-nude" disabled={!canEnableConsent} checked={consentSemiNude} onCheckedChange={(checked) => setConsentSemiNude(checked as boolean)}/>
+                        <div className="grid gap-1.5 leading-none">
+                            <Label htmlFor="consent-semi-nude" className="font-semibold">Semi-Nude Shoots</Label>
+                            <p className="text-sm text-muted-foreground">I consent to be considered for tasteful, artistic semi-nude shoots as per platform guidelines.</p>
+                        </div>
+                    </div>
+                      {consentSemiNude && canEnableConsent && (
+                         <div className="pl-6 space-y-4">
+                            <p className="font-semibold">Upload Semi-Nude Portfolio (min. 4 images)</p>
+                             <div className="flex items-center justify-center w-full">
+                                <Label htmlFor="dropzone-semi-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
+                                        <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
+                                        <p>Click to upload or drag & drop</p>
+                                    </div>
+                                    <Input id="dropzone-semi-nude" type="file" className="hidden" multiple />
+                                </Label>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-4 p-4 border rounded-lg" data-disabled={!canEnableConsent}>
+                    <div className="flex items-start space-x-3">
+                        <Checkbox id="consent-nude" disabled={!canEnableConsent} checked={consentNude} onCheckedChange={(checked) => setConsentNude(checked as boolean)}/>
+                        <div className="grid gap-1.5 leading-none">
+                            <Label htmlFor="consent-nude" className="font-semibold">Nude Shoots</Label>
+                            <p className="text-sm text-muted-foreground">I consent to be considered for artistic nude shoots, understanding they must comply with platform terms.</p>
+                        </div>
+                    </div>
+                     {consentNude && canEnableConsent && (
+                         <div className="pl-6 space-y-4">
+                            <p className="font-semibold">Upload Nude Portfolio (min. 4 images)</p>
+                             <div className="flex items-center justify-center w-full">
+                                <Label htmlFor="dropzone-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6 text-sm">
+                                        <Upload className="w-8 h-8 mb-2 text-muted-foreground"/>
+                                        <p>Click to upload or drag & drop</p>
+                                    </div>
+                                    <Input id="dropzone-nude" type="file" className="hidden" multiple />
+                                </Label>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+            </CardContent>
+            <CardFooter>
+                <Button disabled={!canEnableConsent}>Save Consent Settings</Button>
             </CardFooter>
           </Card>
         </TabsContent>

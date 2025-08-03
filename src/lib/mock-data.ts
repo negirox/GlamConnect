@@ -18,8 +18,14 @@ export type Model = {
   availability: 'Full-time' | 'Part-time' | 'By Project';
   portfolioImages: string[];
   profilePicture: string;
-  skills?: string; // Comma-separated
-  socialLinks?: string; // Comma-separated
+  skills?: string[];
+  socialLinks?: string[];
+  consentBikini?: boolean;
+  consentSemiNude?: boolean;
+  consentNude?: boolean;
+  bikiniPortfolioImages?: string[];
+  semiNudePortfolioImages?: string[];
+  nudePortfolioImages?: string[];
 };
 
 // This data is now read from public/models.csv
