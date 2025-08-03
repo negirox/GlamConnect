@@ -30,7 +30,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { Model } from "@/lib/mock-data";
 import { getModelByEmail } from "@/lib/data-actions";
 import { updateModel } from "@/lib/model-actions";
-import { uploadImage } from "@/lib/upload-actions";
+import { uploadImage, deleteImage } from "@/lib/upload-actions";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -38,6 +38,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getSession } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 
 const profileSchema = z.object({
@@ -80,9 +81,8 @@ export default function ProfileManagementPage() {
   const [isOver18, setIsOver18] = useState(false);
 
   const canEnableConsent = isOver18;
-
-  useEffect(() => {
-    async function fetchModel() {
+  
+  const fetchModel = async () => {
       setLoading(true);
       const session = await getSession();
 
@@ -98,7 +98,9 @@ export default function ProfileManagementPage() {
         setConsentNude(fetchedModel.consentNude || false);
       }
       setLoading(false);
-    }
+  }
+
+  useEffect(() => {
     fetchModel();
   }, [router]);
 
@@ -111,6 +113,15 @@ export default function ProfileManagementPage() {
     setIsUploading(prev => ({ ...prev, [field]: true }));
     
     try {
+      // Delete old images first
+      const oldImages = model[field];
+      if (isMultiple && Array.isArray(oldImages)) {
+          await Promise.all(oldImages.map(img => deleteImage(img)));
+      } else if (!isMultiple && typeof oldImages === 'string') {
+          await deleteImage(oldImages);
+      }
+
+      // Upload new images
       let updatedImagePaths: string[] | string;
       if (isMultiple) {
         const uploadPromises = files.map(file => {
@@ -119,8 +130,7 @@ export default function ProfileManagementPage() {
           return uploadImage(formData);
         });
         const newImageUrls = await Promise.all(uploadPromises);
-        const existingImages = (model[field] as string[] || []);
-        updatedImagePaths = [...existingImages, ...newImageUrls.map(result => result.filePath).filter(Boolean) as string[]];
+        updatedImagePaths = newImageUrls.map(result => result.filePath).filter(Boolean) as string[];
       } else {
          const formData = new FormData();
          formData.append('file', files[0]);
@@ -129,7 +139,9 @@ export default function ProfileManagementPage() {
       }
 
       await updateModel(model.id, { [field]: updatedImagePaths });
-      setModel(prev => prev ? { ...prev, [field]: updatedImagePaths } : null);
+      // This is not ideal as it refetches everything, but it's the simplest
+      // way to ensure UI consistency without complex state management.
+      await fetchModel(); 
       
       toast({
         title: "Upload Successful",
@@ -443,7 +455,7 @@ export default function ProfileManagementPage() {
             <CardHeader>
               <CardTitle className="font-headline">Portfolio Showcase</CardTitle>
               <CardDescription>
-                Upload your best work. High-resolution images are recommended. These images are publicly visible.
+                Upload your best work. High-resolution images are recommended. These images are publicly visible. <span className="font-bold text-destructive">Uploading new images will replace all existing ones.</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -589,7 +601,7 @@ export default function ProfileManagementPage() {
                     </div>
                     {consentBikini && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Bikini Portfolio (min. 4 images)</p>
+                            <p className="font-semibold">Upload Bikini Portfolio (<span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-bikini" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                                     {isUploading.bikiniPortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
@@ -622,7 +634,7 @@ export default function ProfileManagementPage() {
                     </div>
                       {consentSemiNude && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Semi-Nude Portfolio (min. 4 images)</p>
+                            <p className="font-semibold">Upload Semi-Nude Portfolio (<span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-semi-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                                     {isUploading.semiNudePortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
@@ -655,7 +667,7 @@ export default function ProfileManagementPage() {
                     </div>
                      {consentNude && canEnableConsent && (
                          <div className="pl-6 space-y-4">
-                            <p className="font-semibold">Upload Nude Portfolio (min. 4 images)</p>
+                            <p className="font-semibold">Upload Nude Portfolio (<span className="font-bold text-destructive">replaces existing</span>)</p>
                              <div className="flex items-center justify-center w-full">
                                 <Label htmlFor="dropzone-nude" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted">
                                     {isUploading.nudePortfolioImages ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /> :
