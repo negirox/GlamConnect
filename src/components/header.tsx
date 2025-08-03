@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -51,8 +52,12 @@ export function Header() {
           ))}
         </nav>
         <div className="hidden md:flex items-center gap-2">
-           <Button variant="ghost">Log In</Button>
-           <Button className="bg-secondary hover:bg-accent">Sign Up</Button>
+           <Button asChild variant="ghost">
+              <Link href="/login">Log In</Link>
+            </Button>
+           <Button asChild className="bg-secondary hover:bg-accent">
+             <Link href="/signup">Sign Up</Link>
+           </Button>
         </div>
         <div className="md:hidden">
           <Sheet>
@@ -71,8 +76,12 @@ export function Header() {
                   ))}
                 </nav>
                 <div className="border-t pt-4 flex flex-col gap-2">
-                    <Button variant="ghost">Log In</Button>
-                    <Button className="bg-secondary hover:bg-accent">Sign Up</Button>
+                    <Button asChild variant="ghost">
+                        <Link href="/login">Log In</Link>
+                    </Button>
+                    <Button asChild className="bg-secondary hover:bg-accent">
+                        <Link href="/signup">Sign Up</Link>
+                    </Button>
                 </div>
               </div>
             </SheetContent>
