@@ -338,15 +338,28 @@ export default function ProfileDashboardPage() {
             <h2 className="text-3xl font-headline font-bold mb-6">Portfolio</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {model.portfolioImages.map((src, index) => (
-                <div key={index} className="relative aspect-[3/4] w-full group overflow-hidden rounded-lg">
-                  <Image
-                    src={src}
-                    alt={`Portfolio image ${index + 1} for ${model.name}`}
-                    data-ai-hint="portfolio shot"
-                    fill
-                    className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
-                  />
-                </div>
+                <Dialog key={index}>
+                  <DialogTrigger asChild>
+                    <div className="relative aspect-[3/4] w-full group overflow-hidden rounded-lg cursor-pointer">
+                      <Image
+                        src={src}
+                        alt={`Portfolio image ${index + 1} for ${model.name}`}
+                        data-ai-hint="portfolio shot"
+                        fill
+                        className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+                      />
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl">
+                     <Image
+                        src={src}
+                        alt={`Portfolio image ${index + 1} for ${model.name}`}
+                        width={800}
+                        height={1067}
+                        className="object-contain rounded-lg"
+                      />
+                  </DialogContent>
+                </Dialog>
               ))}
             </div>
           </div>

@@ -1,7 +1,8 @@
 
+'use client'
+
 import { getModelById } from '@/lib/data-actions';
 import Image from 'next/image';
-import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,18 +21,38 @@ import {
   PersonStanding,
   Link as LinkIcon,
   BadgeCheck,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { Model } from '@/lib/mock-data';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 type ProfilePageProps = {
   params: { id: string };
 };
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
-  const model = await getModelById(params.id);
+export default function ProfilePage({ params }: ProfilePageProps) {
+  const [model, setModel] = useState<Model | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchModel = async () => {
+      setLoading(true);
+      const fetchedModel = await getModelById(params.id);
+      setModel(fetchedModel || null);
+      setLoading(false);
+    };
+    fetchModel();
+  }, [params.id]);
+
+
+  if (loading) {
+    return <div className="flex h-[calc(100vh-8rem)] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
 
   if (!model) {
-    notFound();
+    return <div className="container mx-auto max-w-6xl px-4 md:px-6 py-12 text-center">Model not found.</div>;
   }
 
   const attributes = [
@@ -128,15 +149,28 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             <h2 className="text-3xl font-headline font-bold mb-6">Portfolio</h2>
             <div className="grid grid-cols-2 gap-4">
               {model.portfolioImages.map((src, index) => (
-                <div key={index} className="relative aspect-[3/4] w-full group overflow-hidden rounded-lg">
-                  <Image
-                    src={src}
-                    alt={`Portfolio image ${index + 1} for ${model.name}`}
-                    data-ai-hint="portfolio shot"
-                    fill
-                    className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
-                  />
-                </div>
+                <Dialog key={index}>
+                  <DialogTrigger asChild>
+                    <div className="relative aspect-[3/4] w-full group overflow-hidden rounded-lg cursor-pointer">
+                      <Image
+                        src={src}
+                        alt={`Portfolio image ${index + 1} for ${model.name}`}
+                        data-ai-hint="portfolio shot"
+                        fill
+                        className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+                      />
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl">
+                     <Image
+                        src={src}
+                        alt={`Portfolio image ${index + 1} for ${model.name}`}
+                        width={800}
+                        height={1067}
+                        className="object-contain rounded-lg"
+                      />
+                  </DialogContent>
+                </Dialog>
               ))}
             </div>
           </div>
