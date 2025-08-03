@@ -115,38 +115,39 @@ export default function ProfileManagementPage() {
     const maxSizeInMB = field === 'profilePicture' ? 0.5 : 2;
 
     try {
+        let updatedImagePaths: string[] | string = [];
+
         // For multiple images, delete all old images first.
         if (isMultiple) {
-            const oldImages = model[field];
+            const oldImages = model[field] as string[] | undefined;
             if (Array.isArray(oldImages) && oldImages.length > 0) {
                 await Promise.all(oldImages.map(img => deleteImage(img)));
             }
-        }
-
-        let updatedImagePaths: string[] | string;
-
-        if (isMultiple) {
-            const uploadPromises = files.map(file => {
-                const formData = new FormData();
-                formData.append('file', file);
-                return uploadImage(formData, maxSizeInMB);
-            });
-            const results = await Promise.all(uploadPromises);
-            
-            const failedUploads = results.filter(r => !r.success);
-            if (failedUploads.length > 0) {
-                const errorMessages = failedUploads.map(f => f.message).join(', ');
-                throw new Error(`Failed to upload some images: ${errorMessages}`);
-            }
-            
-            updatedImagePaths = results.map(result => result.filePath).filter(Boolean) as string[];
-
         } else {
-            // For single image, delete the old image first.
-            const oldImage = model[field];
+             const oldImage = model[field] as string | undefined;
             if (typeof oldImage === 'string' && oldImage) {
                 await deleteImage(oldImage);
             }
+        }
+
+
+        if (isMultiple) {
+            const newPaths: string[] = [];
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                const result = await uploadImage(formData, maxSizeInMB);
+
+                if (!result.success) {
+                    throw new Error(result.message || `Failed to upload ${file.name}.`);
+                }
+                if(result.filePath) {
+                    newPaths.push(result.filePath);
+                }
+            }
+            updatedImagePaths = newPaths;
+        } else {
+            // For single image
             const formData = new FormData();
             formData.append('file', files[0]);
             const result = await uploadImage(formData, maxSizeInMB);
@@ -186,11 +187,11 @@ export default function ProfileManagementPage() {
 
     try {
       await updateModel(model.id, data);
+      await fetchModel();
       toast({
         title: "Profile Updated",
         description: `Your ${tab} information has been saved.`,
       });
-      router.push('/account/profile');
     } catch (error) {
       toast({
         title: "Error",
@@ -209,11 +210,11 @@ export default function ProfileManagementPage() {
     const data = { consentBikini, consentSemiNude, consentNude };
     try {
       await updateModel(model.id, data);
+      await fetchModel();
       toast({
         title: "Consent Updated",
         description: `Your consent settings have been saved.`,
       });
-      router.push('/account/profile');
     } catch (error) {
        toast({
         title: "Error",
@@ -720,3 +721,4 @@ export default function ProfileManagementPage() {
     </div>
   );
 }
+
