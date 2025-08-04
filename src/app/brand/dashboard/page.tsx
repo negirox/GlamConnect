@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import { getSession } from "@/lib/auth-actions";
 import { getBrandByEmail, Brand } from "@/lib/brand-actions";
 import { useRouter } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 // This is a placeholder for now. In a real app you'd fetch this.
 const postedGigs = [
@@ -31,20 +33,45 @@ export default function BrandDashboardPage() {
     
     useEffect(() => {
         const fetchBrand = async () => {
+            setLoading(true);
             const session = await getSession();
             if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
                 router.push('/login');
                 return;
             }
-            const fetchedBrand = await getBrandByEmail(session.email);
-            setBrand(fetchedBrand);
-            setLoading(false);
+
+            try {
+                const fetchedBrand = await getBrandByEmail(session.email);
+                setBrand(fetchedBrand);
+            } catch (error) {
+                console.error("Failed to fetch brand data:", error);
+                setBrand(null);
+            } finally {
+                setLoading(false);
+            }
         }
         fetchBrand();
       }, [router])
 
-    if (loading || !brand) {
+    if (loading) {
       return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin"/></div>
+    }
+
+    if (!brand) {
+      return (
+        <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12 text-center">
+            <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Profile Not Found</AlertTitle>
+                <AlertDescription>
+                   Your brand profile could not be found. Please complete it to continue.
+                </AlertDescription>
+            </Alert>
+            <Button asChild className="mt-4">
+                <Link href="/brand/profile/edit">Complete Your Profile</Link>
+            </Button>
+        </div>
+      )
     }
 
     return (
