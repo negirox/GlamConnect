@@ -64,7 +64,12 @@ export default function LoginPage() {
                 description: "Welcome back!",
             });
             router.refresh(); 
-            router.push('/account/profile');
+
+            if (result.role === 'brand') {
+                router.push('/brand/dashboard');
+            } else {
+                router.push('/account/profile');
+            }
         }
     }
 
@@ -129,5 +134,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

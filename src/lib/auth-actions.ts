@@ -91,7 +91,7 @@ export async function login(values: z.infer<typeof loginSchema>) {
     path: '/',
   });
 
-  return { success: 'Logged in!' };
+  return { success: true, role: user.role };
 }
 
 export async function logout() {
