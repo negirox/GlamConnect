@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { login } from "@/lib/auth-actions";
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -65,12 +66,28 @@ export default function SignupPage() {
         setIsLoading(true);
         setError(null);
         try {
-            await createUser(values);
-            toast({
-              title: "Account Created!",
-              description: "You can now log in with your new account.",
-            });
-            router.push('/login');
+            const userResult = await createUser(values);
+            
+            if (userResult.success) {
+                const loginResult = await login(values);
+                if (loginResult.success) {
+                    toast({
+                      title: "Account Created!",
+                      description: "Welcome to GlamConnect! Please complete your profile.",
+                    });
+
+                    if (values.role === 'brand') {
+                        router.push('/brand/profile/edit');
+                    } else {
+                        router.push('/account/profile');
+                    }
+
+                } else {
+                    // This case is unlikely if createUser succeeds, but good to handle
+                    toast({ title: "Account created, but login failed.", description: "Please try logging in manually.", variant: "destructive" });
+                    router.push('/login');
+                }
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -99,7 +116,7 @@ export default function SignupPage() {
                     <FormItem>
                         <FormLabel>Name</FormLabel>
                         <FormControl>
-                        <Input placeholder="Your Name" {...field} />
+                        <Input placeholder="Your Name or Brand Name" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -156,7 +173,7 @@ export default function SignupPage() {
                               <RadioGroupItem value="brand" />
                             </FormControl>
                             <FormLabel className="font-normal">
-                              Brand
+                              Brand / Agency
                             </FormLabel>
                           </FormItem>
                         </RadioGroup>

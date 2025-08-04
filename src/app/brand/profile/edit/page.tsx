@@ -83,7 +83,7 @@ export default function EditBrandProfilePage() {
           title: 'Profile Updated',
           description: 'Your brand profile has been successfully saved.',
         });
-        router.push('/brand/profile');
+        router.push('/brand/dashboard');
     } catch (error) {
         toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
     } finally {
@@ -119,7 +119,7 @@ export default function EditBrandProfilePage() {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline">Edit Brand Profile</CardTitle>
+            <CardTitle className="font-headline">Complete Your Brand Profile</CardTitle>
             <CardDescription>
               This information will be visible to models on the platform.
             </CardDescription>
@@ -183,7 +183,7 @@ export default function EditBrandProfilePage() {
               Save Changes
             </Button>
             <Button variant="outline" asChild>
-                <Link href="/brand/profile">Cancel</Link>
+                <Link href="/brand/dashboard">Go to Dashboard</Link>
             </Button>
           </CardFooter>
         </Card>

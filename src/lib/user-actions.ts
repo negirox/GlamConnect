@@ -97,11 +97,10 @@ export async function createUser(userData: z.infer<typeof signupSchema>) {
         })
     }
 
-
     revalidatePath('/login');
     revalidatePath('/signup');
 
-    return { success: true, message: 'User created successfully.' };
+    return { success: true, message: 'User created successfully.', user: newUser };
 }
 
 export async function getUser(email: string) {
