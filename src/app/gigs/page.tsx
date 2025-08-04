@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { getGigs, Gig } from "@/lib/gig-actions";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarDays, Briefcase, Building, Users, DollarSign } from "lucide-react";
+import { MapPin, CalendarDays, Briefcase, Building, Users, DollarSign, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -77,14 +77,14 @@ export default function GigsPage() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-muted-foreground line-clamp-3">{gig.description}</p>
-                                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground mt-4">
+                                <div className="flex flex-wrap gap-x-6 gap-y-4 text-sm text-muted-foreground mt-4">
                                     <div className="flex items-center gap-2">
                                         <MapPin className="h-4 w-4" />
                                         <span>{gig.location}</span>
                                     </div>
                                      <div className="flex items-center gap-2">
                                         <CalendarDays className="h-4 w-4" />
-                                        <span>{new Date(gig.date).toLocaleDateString()}</span>
+                                        <span>Shoot Date: {new Date(gig.date).toLocaleDateString()}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Users className="h-4 w-4" />
@@ -93,6 +93,10 @@ export default function GigsPage() {
                                     <div className="flex items-center gap-2 font-semibold">
                                         <DollarSign className="h-4 w-4 text-green-600"/>
                                         <span>{formatBudget(gig)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 font-semibold text-destructive">
+                                        <Clock className="h-4 w-4"/>
+                                        <span>Apply by: {new Date(gig.applicationDeadline).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                             </CardContent>

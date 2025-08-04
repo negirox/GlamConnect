@@ -8,9 +8,13 @@ import { revalidatePath } from 'next/cache';
 const gigsCsvFilePath = path.join(process.cwd(), 'public', 'gigs.csv');
 const GIG_HEADERS = [
     'id', 'title', 'description', 'location', 'date', 'brandId', 'brandName',
-    'projectType', 'category', 'modelsNeeded', 'isGroupShoot', 'timing',
+    'projectType', 'genderPreference', 'modelsNeeded', 'isGroupShoot', 'timing',
     'travelProvided', 'accommodationProvided', 'paymentType', 'budgetMin', 
-    'budgetMax', 'paymentMode', 'paymentTimeline'
+    'budgetMax', 'paymentMode', 'paymentTimeline', 'ageRangeMin', 'ageRangeMax',
+    'heightRangeMin', 'heightRangeMax', 'experienceLevel', 'bodyTypePreferences',
+    'consentRequired', 'languageRequirement', 'portfolioLinkRequired',
+    'moodBoardUrl', 'referenceImages', 'videoBriefLink', 'visibility',
+    'applicationDeadline', 'allowDirectMessaging', 'showBrandName'
 ];
 
 export type Gig = {
@@ -22,7 +26,7 @@ export type Gig = {
     brandId: string;
     brandName: string;
     projectType: string;
-    category: string;
+    genderPreference: 'Male' | 'Female' | 'Trans' | 'Any';
     modelsNeeded: number;
     isGroupShoot?: boolean;
     timing: string;
@@ -33,6 +37,22 @@ export type Gig = {
     budgetMax?: number;
     paymentMode?: 'Bank' | 'Cash' | 'UPI' | 'Other';
     paymentTimeline?: string;
+    ageRangeMin?: number;
+    ageRangeMax?: number;
+    heightRangeMin?: number;
+    heightRangeMax?: number;
+    experienceLevel?: 'Newcomer' | '1-3 years' | '3+ years';
+    bodyTypePreferences?: string[];
+    consentRequired?: ('Bikini' | 'Semi-Nude' | 'Nude')[];
+    languageRequirement?: string[];
+    portfolioLinkRequired?: boolean;
+    moodBoardUrl?: string;
+    referenceImages?: string[];
+    videoBriefLink?: string;
+    visibility?: 'Public' | 'Private' | 'Premium only';
+    applicationDeadline: string;
+    allowDirectMessaging?: boolean;
+    showBrandName?: boolean;
 }
 
 function readGigs(): Gig[] {
@@ -51,10 +71,12 @@ function readGigs(): Gig[] {
         const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         const entry = headers.reduce((obj, header, index) => {
             const rawValue = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
-            if (['modelsNeeded', 'budgetMin', 'budgetMax'].includes(header)) {
+            if (['modelsNeeded', 'budgetMin', 'budgetMax', 'ageRangeMin', 'ageRangeMax', 'heightRangeMin', 'heightRangeMax'].includes(header)) {
                 (obj as any)[header] = rawValue ? parseInt(rawValue, 10) : undefined;
-            } else if (['isGroupShoot', 'travelProvided', 'accommodationProvided'].includes(header)) {
+            } else if (['isGroupShoot', 'travelProvided', 'accommodationProvided', 'portfolioLinkRequired', 'allowDirectMessaging', 'showBrandName'].includes(header)) {
                 (obj as any)[header] = rawValue.toLowerCase() === 'true';
+            } else if (['bodyTypePreferences', 'consentRequired', 'languageRequirement', 'referenceImages'].includes(header)) {
+                (obj as any)[header] = rawValue ? rawValue.split(';').map(s => s.trim()) : [];
             } else {
                  (obj as any)[header] = rawValue;
             }
@@ -71,6 +93,9 @@ function writeGigs(gigs: Gig[]) {
             const key = header as keyof Gig;
             let value = gig[key];
             
+            if (Array.isArray(value)) {
+                return `"${value.join(';')}"`;
+            }
             if (value === null || value === undefined) {
                 return '';
             }
