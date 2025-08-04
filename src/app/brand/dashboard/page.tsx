@@ -3,9 +3,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Briefcase, Building } from "lucide-react";
+import { PlusCircle, Briefcase, Building, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
+import { getSession } from "@/lib/auth-actions";
+import { getBrandByEmail, Brand } from "@/lib/brand-actions";
+import { useRouter } from "next/navigation";
 
 // This is a placeholder for now. In a real app you'd fetch this.
 const postedGigs = [
@@ -21,10 +25,32 @@ const savedLists = [
 
 
 export default function BrandDashboardPage() {
+    const [brand, setBrand] = useState<Brand | null>(null);
+    const [loading, setLoading] = useState(true);
+    const router = useRouter();
+    
+    useEffect(() => {
+        const fetchBrand = async () => {
+            const session = await getSession();
+            if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
+                router.push('/login');
+                return;
+            }
+            const fetchedBrand = await getBrandByEmail(session.email);
+            setBrand(fetchedBrand);
+            setLoading(false);
+        }
+        fetchBrand();
+      }, [router])
+
+    if (loading || !brand) {
+      return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin"/></div>
+    }
+
     return (
         <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
             <div className="space-y-2 mb-8">
-                <h1 className="text-4xl font-headline font-bold">Brand Dashboard</h1>
+                <h1 className="text-4xl font-headline font-bold">Welcome, {brand.name}</h1>
                 <p className="text-muted-foreground">Manage your job postings, review applicants, and find the perfect talent.</p>
             </div>
 
@@ -43,9 +69,9 @@ export default function BrandDashboardPage() {
                         <div className="space-y-2">
                            <div className="flex items-center gap-2">
                                 <Building className="h-5 w-5 text-muted-foreground" />
-                                <p className="font-semibold">Luxe Apparel Co.</p>
+                                <p className="font-semibold">{brand.name}</p>
                            </div>
-                           <p className="text-sm text-muted-foreground">High-end fashion house specializing in modern couture.</p>
+                           <p className="text-sm text-muted-foreground">{brand.description || "No description provided. Click 'View & Edit' to add one."}</p>
                         </div>
                     </CardContent>
                 </Card>

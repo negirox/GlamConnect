@@ -35,7 +35,6 @@ const allNavLinks: NavLinkItem[] = [
   { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['model', 'brand'] },
   { href: '/account/profile', label: 'My Profile', icon: User, roles: ['model'] },
   { href: '/brand/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['brand'] },
-  { href: '/brand/profile', label: 'My Profile', icon: User, roles: ['brand'] },
   { href: '/gigs/post', label: 'Post Gig', icon: PlusCircle, roles: ['brand'] },
 ];
 
@@ -51,15 +50,17 @@ export function Header() {
 
       const currentRole = sessionData.isLoggedIn ? sessionData.role : 'guest';
       
-      let filteredLinks = allNavLinks.filter(link => link.roles.includes(currentRole));
-
-      // A bit of a hack to not show both Dashboard and My Profile for brand
+      const filteredLinks = allNavLinks.filter(link => link.roles.includes(currentRole));
+      
+      // Special handling for brand profile link
       if (currentRole === 'brand') {
-          const hasDashboard = filteredLinks.some(l => l.href === '/brand/dashboard');
-          if(hasDashboard) {
-              filteredLinks = filteredLinks.filter(l => !(l.href === '/brand/profile' && pathname.startsWith('/brand/dashboard')))
+          const profileLink = { href: '/brand/profile', label: 'My Profile', icon: User, roles: ['brand'] };
+          // Add profile link if not already on a brand page, to avoid redundancy
+          if (!pathname.startsWith('/brand/')) {
+              filteredLinks.push(profileLink);
           }
       }
+
       setVisibleLinks(filteredLinks);
 
     };
