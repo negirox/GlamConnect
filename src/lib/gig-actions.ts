@@ -6,7 +6,11 @@ import path from 'path';
 import { revalidatePath } from 'next/cache';
 
 const gigsCsvFilePath = path.join(process.cwd(), 'public', 'gigs.csv');
-const GIG_HEADERS = ['id', 'title', 'description', 'location', 'date', 'brandId', 'brandName'];
+const GIG_HEADERS = [
+    'id', 'title', 'description', 'location', 'date', 'brandId', 'brandName',
+    'projectType', 'category', 'modelsNeeded', 'isGroupShoot', 'timing',
+    'travelProvided', 'accommodationProvided'
+];
 
 export type Gig = {
     id: string;
@@ -16,6 +20,13 @@ export type Gig = {
     date: string;
     brandId: string;
     brandName: string;
+    projectType: string;
+    category: string;
+    modelsNeeded: number;
+    isGroupShoot?: boolean;
+    timing: string;
+    travelProvided?: boolean;
+    accommodationProvided?: boolean;
 }
 
 function readGigs(): Gig[] {
@@ -33,7 +44,14 @@ function readGigs(): Gig[] {
     return lines.slice(1).map(line => {
         const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         const entry = headers.reduce((obj, header, index) => {
-            (obj as any)[header] = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
+            const rawValue = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
+            if (header === 'modelsNeeded') {
+                (obj as any)[header] = parseInt(rawValue, 10) || 0;
+            } else if (['isGroupShoot', 'travelProvided', 'accommodationProvided'].includes(header)) {
+                (obj as any)[header] = rawValue.toLowerCase() === 'true';
+            } else {
+                 (obj as any)[header] = rawValue;
+            }
             return obj;
         }, {} as Gig);
         return entry;
@@ -47,6 +65,10 @@ function writeGigs(gigs: Gig[]) {
             const key = header as keyof Gig;
             let value = gig[key];
             
+            if (value === null || value === undefined) {
+                return '';
+            }
+
             let stringValue = String(value);
              if (stringValue.includes(',')) {
                 return `"${stringValue.replace(/"/g, '""')}"`;

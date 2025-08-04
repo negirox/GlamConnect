@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { getGigs, Gig } from "@/lib/gig-actions";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarDays, Briefcase, Building } from "lucide-react";
+import { MapPin, CalendarDays, Briefcase, Building, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -59,7 +59,7 @@ export default function GigsPage() {
                                             <Building className="h-4 w-4"/>Posted by {gig.brandName}
                                         </CardDescription>
                                     </div>
-                                    <Badge variant="secondary">New</Badge>
+                                    <Badge variant="secondary">{gig.projectType}</Badge>
                                 </div>
                             </CardHeader>
                             <CardContent>
@@ -72,6 +72,10 @@ export default function GigsPage() {
                                      <div className="flex items-center gap-2">
                                         <CalendarDays className="h-4 w-4" />
                                         <span>{new Date(gig.date).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Users className="h-4 w-4" />
+                                        <span>{gig.modelsNeeded} model(s)</span>
                                     </div>
                                 </div>
                             </CardContent>

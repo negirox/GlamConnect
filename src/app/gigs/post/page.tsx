@@ -2,7 +2,7 @@
 'use client'
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Form,
@@ -28,15 +29,25 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle, Calendar, MapPin, Clock } from "lucide-react";
 import { getSession } from "@/lib/auth-actions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 
 
 const gigSchema = z.object({
     title: z.string().min(5, "Title must be at least 5 characters long."),
     description: z.string().min(20, "Description must be at least 20 characters long."),
+    projectType: z.string().min(1, "Please select a project type"),
+    category: z.string().min(1, "Please select a category"),
+    modelsNeeded: z.coerce.number().min(1, "At least one model is required"),
+    isGroupShoot: z.string().optional(),
     location: z.string().min(2, "Location is required."),
     date: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date" }),
+    timing: z.string().min(1, "Please provide shoot timing"),
+    travelProvided: z.string().optional(),
+    accommodationProvided: z.string().optional(),
 });
 
 export default function PostGigPage() {
@@ -51,6 +62,13 @@ export default function PostGigPage() {
             description: "",
             location: "",
             date: "",
+            projectType: "",
+            category: "",
+            modelsNeeded: 1,
+            isGroupShoot: 'false',
+            timing: "",
+            travelProvided: 'false',
+            accommodationProvided: 'false',
         },
     });
 
@@ -64,7 +82,15 @@ export default function PostGigPage() {
         }
 
         try {
-            await createGig({ ...values, brandId: session.id, brandName: session.name });
+            const dataToSave = {
+                ...values,
+                brandId: session.id, 
+                brandName: session.name,
+                isGroupShoot: values.isGroupShoot === 'true',
+                travelProvided: values.travelProvided === 'true',
+                accommodationProvided: values.accommodationProvided === 'true',
+            };
+            await createGig(dataToSave);
             toast({
                 title: "Gig Posted!",
                 description: "Your new gig is now live for models to see.",
@@ -87,14 +113,14 @@ export default function PostGigPage() {
                 <h1 className="text-4xl font-headline font-bold">Post a New Gig</h1>
                 <p className="text-muted-foreground">Reach thousands of professional models by posting your job opportunity below.</p>
             </div>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Gig Details</CardTitle>
-                    <CardDescription>Provide as much detail as possible to attract the right talent.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+             <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Basic Details</CardTitle>
+                            <CardDescription>Provide as much detail as possible to attract the right talent.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
                             <FormField
                                 control={form.control}
                                 name="title"
@@ -127,10 +153,91 @@ export default function PostGigPage() {
                             <div className="grid grid-cols-2 gap-6">
                                 <FormField
                                     control={form.control}
+                                    name="projectType"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Project Type</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Commercial">Commercial</SelectItem>
+                                                    <SelectItem value="Editorial">Editorial</SelectItem>
+                                                    <SelectItem value="Music Video">Music Video</SelectItem>
+                                                    <SelectItem value="Catalogue">Catalogue</SelectItem>
+                                                    <SelectItem value="Runway">Runway</SelectItem>
+                                                    <SelectItem value="Fitness">Fitness</SelectItem>
+                                                    <SelectItem value="Swimwear">Swimwear</SelectItem>
+                                                    <SelectItem value="Nude">Nude</SelectItem>
+                                                    <SelectItem value="Semi-Nude">Semi-Nude</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                 <FormField
+                                    control={form.control}
+                                    name="category"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Category/Role</FormLabel>
+                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select role..." /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Female">Female</SelectItem>
+                                                    <SelectItem value="Male">Male</SelectItem>
+                                                    <SelectItem value="Trans">Trans</SelectItem>
+                                                    <SelectItem value="Any">Any</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-6 items-end">
+                                <FormField
+                                    control={form.control}
+                                    name="modelsNeeded"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Number of Models Needed</FormLabel>
+                                            <FormControl><Input type="number" min="1" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="isGroupShoot"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-3">
+                                            <FormLabel>Is this a group shoot?</FormLabel>
+                                            <FormControl>
+                                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="true" /></FormControl><FormLabel className="font-normal">Yes</FormLabel></FormItem>
+                                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="false" /></FormControl><FormLabel className="font-normal">No</FormLabel></FormItem>
+                                                </RadioGroup>
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    
+                    <Card className="mt-6">
+                        <CardHeader>
+                            <CardTitle>Location & Schedule</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                             <div className="grid grid-cols-2 gap-6">
+                                <FormField
+                                    control={form.control}
                                     name="location"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Location</FormLabel>
+                                            <FormLabel className="flex items-center"><MapPin className="mr-2 h-4 w-4"/>Shoot Location</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="City, Country" {...field} />
                                             </FormControl>
@@ -143,7 +250,7 @@ export default function PostGigPage() {
                                     name="date"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Shoot Date</FormLabel>
+                                            <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4"/>Shoot Date</FormLabel>
                                             <FormControl>
                                                 <Input type="date" {...field} />
                                             </FormControl>
@@ -151,15 +258,62 @@ export default function PostGigPage() {
                                         </FormItem>
                                     )}
                                 />
+                             </div>
+                             <FormField
+                                control={form.control}
+                                name="timing"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="flex items-center"><Clock className="mr-2 h-4 w-4"/>Timing</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., 10AM - 6PM" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <div className="grid grid-cols-2 gap-6">
+                                <FormField
+                                    control={form.control}
+                                    name="travelProvided"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-3">
+                                            <FormLabel>Travel Provided?</FormLabel>
+                                            <FormControl>
+                                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="true" /></FormControl><FormLabel className="font-normal">Yes</FormLabel></FormItem>
+                                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="false" /></FormControl><FormLabel className="font-normal">No</FormLabel></FormItem>
+                                                </RadioGroup>
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="accommodationProvided"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-3">
+                                            <FormLabel>Accommodation Provided?</FormLabel>
+                                            <FormControl>
+                                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="true" /></FormControl><FormLabel className="font-normal">Yes</FormLabel></FormItem>
+                                                    <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="false" /></FormControl><FormLabel className="font-normal">No</FormLabel></FormItem>
+                                                </RadioGroup>
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
+                        </CardContent>
+                        <CardFooter>
                             <Button type="submit" disabled={isLoading} className="w-full" size="lg">
                                 {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2"/>}
                                 Post Gig
                             </Button>
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
+                        </CardFooter>
+                    </Card>
+                </form>
+            </Form>
         </div>
     )
 }
