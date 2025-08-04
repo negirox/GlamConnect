@@ -26,7 +26,7 @@ import {
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { login } from "@/lib/auth-actions";
+import { login, getSession } from "@/lib/auth-actions";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
@@ -63,9 +63,12 @@ export default function LoginPage() {
                 title: "Login Successful!",
                 description: "Welcome back!",
             });
+            
+            // Re-fetch session to get the role and redirect accordingly
+            const session = await getSession();
             router.refresh(); 
 
-            if (result?.role === 'brand') {
+            if (session.isLoggedIn && session.role === 'brand') {
                 router.push('/brand/dashboard');
             } else {
                 router.push('/account/profile');
