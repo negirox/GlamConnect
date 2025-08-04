@@ -12,34 +12,50 @@ import {
   MessageSquare,
   User,
   LogOut,
+  Briefcase,
+  PlusCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from './logo';
 import { useEffect, useState } from 'react';
 import { getSession, logout } from '@/lib/auth-actions';
 
+type NavLinkItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  roles: ('model' | 'brand' | 'guest')[];
+};
 
-const navLinks = [
-  { href: '/search', label: 'Search', icon: Search },
-  { href: '/recommendations', label: 'AI Recs', icon: Sparkles },
-  { href: '/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/account/profile', label: 'Dashboard', icon: User },
+const allNavLinks: NavLinkItem[] = [
+  { href: '/search', label: 'Search', icon: Search, roles: ['model', 'brand', 'guest'] },
+  { href: '/gigs', label: 'Gigs', icon: Briefcase, roles: ['model', 'brand', 'guest'] },
+  { href: '/recommendations', label: 'AI Recs', icon: Sparkles, roles: ['brand'] },
+  { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['model', 'brand'] },
+  { href: '/account/profile', label: 'My Profile', icon: User, roles: ['model'] },
+  { href: '/brand/dashboard', label: 'Dashboard', icon: User, roles: ['brand'] },
+  { href: '/gigs/post', label: 'Post Gig', icon: PlusCircle, roles: ['brand'] },
 ];
 
 export function Header() {
   const pathname = usePathname();
   const [session, setSession] = useState<any>(null);
+  const [visibleLinks, setVisibleLinks] = useState<NavLinkItem[]>([]);
 
   useEffect(() => {
     const fetchSession = async () => {
-        const sessionData = await getSession();
-        setSession(sessionData);
+      const sessionData = await getSession();
+      setSession(sessionData);
+
+      const currentRole = sessionData.isLoggedIn ? sessionData.role : 'guest';
+      const filteredLinks = allNavLinks.filter(link => link.roles.includes(currentRole));
+      setVisibleLinks(filteredLinks);
     };
     fetchSession();
   }, [pathname]);
 
 
-  const NavLink = ({ href, label, icon: Icon }: (typeof navLinks)[0]) => {
+  const NavLink = ({ href, label, icon: Icon }: NavLinkItem) => {
     const isActive = pathname.startsWith(href);
     return (
       <Link
@@ -60,7 +76,7 @@ export function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Logo />
         <nav className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => (
+          {visibleLinks.map((link) => (
             <NavLink key={link.href} {...link} />
           ))}
         </nav>
@@ -95,7 +111,7 @@ export function Header() {
               <div className="flex flex-col gap-6 p-6">
                 <Logo />
                 <nav className="flex flex-col gap-4">
-                  {navLinks.map((link) => (
+                  {visibleLinks.map((link) => (
                     <NavLink key={link.href} {...link} />
                   ))}
                 </nav>
