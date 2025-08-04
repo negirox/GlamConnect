@@ -18,8 +18,8 @@ export default function GigsPage() {
         async function fetchGigs() {
             setLoading(true);
             const fetchedGigs = await getGigs();
-            // Only show verified gigs on the public listing
-            setGigs(fetchedGigs.filter(gig => gig.status === 'Verified'));
+            // Show all gigs on the public listing for now
+            setGigs(fetchedGigs);
             setLoading(false);
         }
         fetchGigs();
