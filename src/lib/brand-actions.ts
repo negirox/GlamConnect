@@ -30,8 +30,8 @@ export type Brand = {
 
 const csvFilePath = path.join(process.cwd(), 'public', 'brands.csv');
 const ALL_BRAND_HEADERS = [
-    'id', 'name', 'email', 'industry', 'website', 'description', 
-    'logo', 'verificationStatus', 'businessType', 'phoneNumber', 'addressStreet', 
+    'id', 'name', 'email', 'businessType', 'industry', 'website', 'description', 
+    'logo', 'verificationStatus', 'phoneNumber', 'addressStreet', 
     'addressCity', 'addressState', 'addressCountry', 'addressZip', 'socialLinks',
     'contactPersonName', 'contactPersonRole', 'contactPersonEmail', 'contactPersonPhone'
 ];

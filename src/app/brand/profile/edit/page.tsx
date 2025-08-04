@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Loader2, Upload, Building, Phone, Globe, Link2, User } from 'lucide-react';
+import { Loader2, Upload, Building, Phone, Globe, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getSession } from '@/lib/auth-actions';
@@ -94,7 +94,7 @@ export default function EditBrandProfilePage() {
     }
     fetchBrand();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
 
   const onSubmit = async (data: z.infer<typeof brandProfileSchema>) => {
@@ -151,7 +151,7 @@ export default function EditBrandProfilePage() {
           <CardContent className="space-y-8">
             {/* Basic Details */}
             <div className="space-y-6">
-                <h3 className="text-xl font-headline font-semibold flex items-center"><Building className="mr-3 text-primary-foreground" /> Basic Details</h3>
+                <h3 className="text-xl font-headline font-semibold flex items-center"><Building className="mr-3 text-primary" /> Basic Details</h3>
                 <div className="space-y-2">
                     <Label>Brand Logo</Label>
                     <div className="flex items-center gap-4">
@@ -213,7 +213,7 @@ export default function EditBrandProfilePage() {
 
             {/* Representative Details */}
             <div className="space-y-6">
-                <h3 className="text-xl font-headline font-semibold flex items-center"><User className="mr-3 text-primary-foreground" /> Representative Details</h3>
+                <h3 className="text-xl font-headline font-semibold flex items-center"><User className="mr-3 text-primary" /> Representative Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="contactPersonName">Full Name of Contact Person</Label>
@@ -239,7 +239,7 @@ export default function EditBrandProfilePage() {
 
             {/* Contact & Location */}
             <div className="space-y-6">
-                 <h3 className="text-xl font-headline font-semibold flex items-center"><Phone className="mr-3 text-primary-foreground" /> Contact & Location</h3>
+                 <h3 className="text-xl font-headline font-semibold flex items-center"><Phone className="mr-3 text-primary" /> Contact & Location</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="email">Official Business Email</Label>
@@ -267,7 +267,7 @@ export default function EditBrandProfilePage() {
             
             {/* Online Presence */}
             <div className="space-y-6">
-                 <h3 className="text-xl font-headline font-semibold flex items-center"><Globe className="mr-3 text-primary-foreground" /> Online Presence</h3>
+                 <h3 className="text-xl font-headline font-semibold flex items-center"><Globe className="mr-3 text-primary" /> Online Presence</h3>
                   <div className="space-y-2">
                     <Label htmlFor="website">Website / Portfolio URL</Label>
                     <Input id="website" {...form.register('website')} placeholder="https://yourbrand.com"/>
