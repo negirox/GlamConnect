@@ -1,2 +1,3 @@
-id,name,email,industry,website,description,location,logo,verificationStatus
-3,Zara,mukeshsingh.negi070@gmail.com,Fashion,,Zara is new brand. located in Mumbai. Searching for new faces/models.,Mumbai,/uploads/1754322707578-Ella_the_Elephant.png,Not Verified
+id,name,email,industry,website,description,location,logo,verificationStatus,businessType,phoneNumber,addressStreet,addressCity,addressState,addressCountry,addressZip,socialLinks,contactPersonName,contactPersonRole,contactPersonEmail,contactPersonPhone
+3,Zara,mukeshsingh.negi070@gmail.com,Fashion,,Zara is new brand. located in Mumbai. Searching for new faces/models.,Mumbai,/uploads/1754322707578-Ella_the_Elephant.png,Not Verified,,,,,,,,,,,,
+4,Alice Johnson,mukeshsingh.negi0700@gmail.com,,,,,https://placehold.co/400x400.png,Not Verified,,,,,,,,,,,,

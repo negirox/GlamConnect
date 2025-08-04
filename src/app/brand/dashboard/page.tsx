@@ -98,7 +98,7 @@ export default function BrandDashboardPage() {
                                 <Building className="h-5 w-5 text-muted-foreground" />
                                 <p className="font-semibold">{brand.name}</p>
                            </div>
-                           <p className="text-sm text-muted-foreground">{brand.description || "No description provided. Click 'View & Edit' to add one."}</p>
+                           <p className="text-sm text-muted-foreground line-clamp-2">{brand.description || "No description provided. Click 'View & Edit' to add one."}</p>
                         </div>
                     </CardContent>
                 </Card>
