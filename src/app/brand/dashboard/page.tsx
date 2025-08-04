@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Briefcase, Building, Loader2 } from "lucide-react";
+import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
@@ -93,12 +93,34 @@ export default function BrandDashboardPage() {
                         <CardDescription>Manage your public-facing brand information.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-2">
-                           <div className="flex items-center gap-2">
-                                <Building className="h-5 w-5 text-muted-foreground" />
-                                <p className="font-semibold">{brand.name}</p>
+                        <div className="space-y-4">
+                           <div className="flex items-start gap-2">
+                                <Building className="h-5 w-5 text-muted-foreground mt-1" />
+                                <div>
+                                    <p className="font-semibold">{brand.name}</p>
+                                    <p className="text-sm text-muted-foreground line-clamp-2">{brand.description || "No description provided."}</p>
+                                </div>
                            </div>
-                           <p className="text-sm text-muted-foreground line-clamp-2">{brand.description || "No description provided. Click 'View & Edit' to add one."}</p>
+                           <Separator />
+                           {brand.contactPersonName && (
+                            <div className="space-y-3 text-sm">
+                                <p className="font-medium">Primary Contact</p>
+                                <div className="space-y-2 text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                        <User className="h-4 w-4"/>
+                                        <span>{brand.contactPersonName} ({brand.contactPersonRole || 'N/A'})</span>
+                                    </div>
+                                     <div className="flex items-center gap-2">
+                                        <Mail className="h-4 w-4"/>
+                                        <span>{brand.contactPersonEmail || 'No email provided'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Phone className="h-4 w-4"/>
+                                        <span>{brand.contactPersonPhone || 'No phone provided'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                           )}
                         </div>
                     </CardContent>
                 </Card>

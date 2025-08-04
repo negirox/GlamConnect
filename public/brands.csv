@@ -1,3 +1,3 @@
-id,name,email,industry,website,description,location,logo,verificationStatus,businessType,phoneNumber,addressStreet,addressCity,addressState,addressCountry,addressZip,socialLinks,contactPersonName,contactPersonRole,contactPersonEmail,contactPersonPhone
-3,Zara,mukeshsingh.negi070@gmail.com,Fashion,,Zara is new brand. located in Mumbai. Searching for new faces/models.,Mumbai,/uploads/1754322707578-Ella_the_Elephant.png,Not Verified,,,,,,,,,,,,
-4,Alice Johnson,mukeshsingh.negi0700@gmail.com,,,,,https://placehold.co/400x400.png,Not Verified,,,,,,,,,,,,
+id,name,email,businessType,industry,website,description,logo,verificationStatus,phoneNumber,addressStreet,addressCity,addressState,addressCountry,addressZip,socialLinks,contactPersonName,contactPersonRole,contactPersonEmail,contactPersonPhone
+3,Zara,mukeshsingh.negi070@gmail.com,,Fashion,,Zara is new brand. located in Mumbai. Searching for new faces/models.,/uploads/1754322707578-Ella_the_Elephant.png,Not Verified,,,,,,,,,,,
+4,Alice Johnson,mukeshsingh.negi0700@gmail.com,Photographer,Fashion,https://www.youtube.com/test,Brand is very big. it needs some fresh faces,https://placehold.co/400x400.png,Not Verified,9044988629,KDA,Lucknow,BC,Canada,A1A 1A1,,Mukesh Negi,Mukesh Negi,mukeshsingh.negi07@gmail.com,9044988629
