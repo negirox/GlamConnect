@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Loader2, Upload, Building, Phone, Globe, Link2 } from 'lucide-react';
+import { Loader2, Upload, Building, Phone, Globe, Link2, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getSession } from '@/lib/auth-actions';
@@ -42,6 +42,10 @@ const brandProfileSchema = z.object({
   addressCountry: z.string().optional(),
   addressZip: z.string().optional(),
   socialLinks: z.string().optional(),
+  contactPersonName: z.string().optional(),
+  contactPersonRole: z.string().optional(),
+  contactPersonEmail: z.string().email().optional().or(z.literal('')),
+  contactPersonPhone: z.string().optional(),
 });
 
 export default function EditBrandProfilePage() {
@@ -67,6 +71,10 @@ export default function EditBrandProfilePage() {
       addressCountry: '',
       addressZip: '',
       socialLinks: '',
+      contactPersonName: '',
+      contactPersonRole: '',
+      contactPersonEmail: '',
+      contactPersonPhone: '',
     },
   });
   
@@ -203,17 +211,43 @@ export default function EditBrandProfilePage() {
 
             <Separator />
 
+            {/* Representative Details */}
+            <div className="space-y-6">
+                <h3 className="text-xl font-headline font-semibold flex items-center"><User className="mr-3 text-primary-foreground" /> Representative Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="contactPersonName">Full Name of Contact Person</Label>
+                        <Input id="contactPersonName" {...form.register('contactPersonName')} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="contactPersonRole">Designation / Role</Label>
+                        <Input id="contactPersonRole" {...form.register('contactPersonRole')} placeholder="e.g., Creative Director" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="contactPersonEmail">Email</Label>
+                        <Input id="contactPersonEmail" type="email" {...form.register('contactPersonEmail')} />
+                        {form.formState.errors.contactPersonEmail && <p className="text-sm text-destructive">{form.formState.errors.contactPersonEmail.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="contactPersonPhone">Mobile Number</Label>
+                        <Input id="contactPersonPhone" {...form.register('contactPersonPhone')} />
+                    </div>
+                </div>
+            </div>
+
+            <Separator />
+
             {/* Contact & Location */}
             <div className="space-y-6">
                  <h3 className="text-xl font-headline font-semibold flex items-center"><Phone className="mr-3 text-primary-foreground" /> Contact & Location</h3>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="email">Official Email Address</Label>
+                      <Label htmlFor="email">Official Business Email</Label>
                       <Input id="email" {...form.register('email')} placeholder="contact@yourbrand.com"/>
                        {form.formState.errors.email && <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phoneNumber">Phone Number</Label>
+                      <Label htmlFor="phoneNumber">Business Phone Number</Label>
                       <Input id="phoneNumber" {...form.register('phoneNumber')} />
                     </div>
                  </div>

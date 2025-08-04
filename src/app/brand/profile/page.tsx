@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Building, Globe, Link as LinkIcon, Edit, Mail, MapPin, Loader2, Phone, Briefcase } from 'lucide-react';
+import { Building, Globe, Link as LinkIcon, Edit, Mail, MapPin, Loader2, Phone, Briefcase, User } from 'lucide-react';
 import NextLink from "next/link";
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
@@ -75,10 +75,18 @@ export default function BrandProfilePage() {
                         <p className="text-muted-foreground">{brand.addressCountry}</p>
                     </div>
                     <div>
-                        <h4 className="font-semibold flex items-center mb-2"><Mail className="mr-2"/> Contact</h4>
+                        <h4 className="font-semibold flex items-center mb-2"><Mail className="mr-2"/> Business Contact</h4>
                          <a href={`mailto:${brand.email}`} className="text-primary hover:underline block">{brand.email}</a>
                          {brand.phoneNumber && <p className="text-muted-foreground">{brand.phoneNumber}</p>}
                     </div>
+                    {brand.contactPersonName && (
+                        <div>
+                            <h4 className="font-semibold flex items-center mb-2"><User className="mr-2"/> Representative</h4>
+                            <p className="text-muted-foreground font-medium">{brand.contactPersonName} ({brand.contactPersonRole})</p>
+                            {brand.contactPersonEmail && <a href={`mailto:${brand.contactPersonEmail}`} className="text-primary hover:underline block">{brand.contactPersonEmail}</a>}
+                            {brand.contactPersonPhone && <p className="text-muted-foreground">{brand.contactPersonPhone}</p>}
+                        </div>
+                    )}
                     <div>
                         <h4 className="font-semibold flex items-center mb-2"><Globe className="mr-2"/> Website</h4>
                         {brand.website ? 
@@ -88,7 +96,7 @@ export default function BrandProfilePage() {
                             : <p className="text-muted-foreground">Not specified</p>
                         }
                     </div>
-                     <div>
+                     <div className="col-span-full">
                         <h4 className="font-semibold flex items-center mb-2"><LinkIcon className="mr-2"/> Social Media</h4>
                         <div className="flex flex-col space-y-1">
                         {socialLinks.length > 0 ? socialLinks.map((link, i) => (

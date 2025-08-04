@@ -23,13 +23,18 @@ export type Brand = {
     addressCountry?: string;
     addressZip?: string;
     socialLinks?: string;
+    contactPersonName?: string;
+    contactPersonRole?: string;
+    contactPersonEmail?: string;
+    contactPersonPhone?: string;
 }
 
 const csvFilePath = path.join(process.cwd(), 'public', 'brands.csv');
 const ALL_BRAND_HEADERS = [
     'id', 'name', 'email', 'industry', 'website', 'description', 'location', 
     'logo', 'verificationStatus', 'businessType', 'phoneNumber', 'addressStreet', 
-    'addressCity', 'addressState', 'addressCountry', 'addressZip', 'socialLinks'
+    'addressCity', 'addressState', 'addressCountry', 'addressZip', 'socialLinks',
+    'contactPersonName', 'contactPersonRole', 'contactPersonEmail', 'contactPersonPhone'
 ];
 
 function parseCSV(csv: string): Brand[] {
@@ -118,6 +123,10 @@ export async function createBrandForUser(brandData: Partial<Brand>) {
         addressCountry: '',
         addressZip: '',
         socialLinks: '',
+        contactPersonName: '',
+        contactPersonRole: '',
+        contactPersonEmail: '',
+        contactPersonPhone: '',
     };
     
     brands.push(defaultBrand);
