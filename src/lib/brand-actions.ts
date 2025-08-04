@@ -12,13 +12,29 @@ export type Brand = {
     industry: string;
     website: string;
     description: string;
-    location: string;
     logo: string;
     verificationStatus: 'Verified' | 'Not Verified' | 'Pending';
+    businessType: string;
+    phoneNumber: string;
+    addressStreet: string;
+    addressCity: string;
+    addressState: string;
+    addressCountry: string;
+    addressZip: string;
+    socialLinks: string;
+    contactPersonName: string;
+    contactPersonRole: string;
+    contactPersonEmail: string;
+    contactPersonPhone: string;
 }
 
 const csvFilePath = path.join(process.cwd(), 'public', 'brands.csv');
-const ALL_BRAND_HEADERS = ['id', 'name', 'email', 'industry', 'website', 'description', 'location', 'logo', 'verificationStatus'];
+const ALL_BRAND_HEADERS = [
+    'id', 'name', 'email', 'businessType', 'industry', 'website', 'description', 
+    'logo', 'verificationStatus', 'phoneNumber', 'addressStreet', 
+    'addressCity', 'addressState', 'addressCountry', 'addressZip', 'socialLinks',
+    'contactPersonName', 'contactPersonRole', 'contactPersonEmail', 'contactPersonPhone'
+];
 
 function parseCSV(csv: string): Brand[] {
   const lines = csv.trim().split('\n');
@@ -95,9 +111,20 @@ export async function createBrandForUser(brandData: Partial<Brand>) {
         industry: '',
         website: '',
         description: '',
-        location: '',
         logo: 'https://placehold.co/400x400.png',
         verificationStatus: 'Not Verified',
+        businessType: '',
+        phoneNumber: '',
+        addressStreet: '',
+        addressCity: '',
+        addressState: '',
+        addressCountry: '',
+        addressZip: '',
+        socialLinks: '',
+        contactPersonName: '',
+        contactPersonRole: '',
+        contactPersonEmail: '',
+        contactPersonPhone: '',
     };
     
     brands.push(defaultBrand);
