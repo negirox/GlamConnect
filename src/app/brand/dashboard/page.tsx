@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Briefcase } from "lucide-react";
+import { PlusCircle, Briefcase, Building } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -29,6 +29,27 @@ export default function BrandDashboardPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline flex items-center justify-between">
+                           <span>Company Profile</span>
+                           <Button asChild variant="outline" size="sm">
+                               <Link href="/brand/profile">View & Edit</Link>
+                           </Button>
+                        </CardTitle>
+                        <CardDescription>Manage your public-facing brand information.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                           <div className="flex items-center gap-2">
+                                <Building className="h-5 w-5 text-muted-foreground" />
+                                <p className="font-semibold">Luxe Apparel Co.</p>
+                           </div>
+                           <p className="text-sm text-muted-foreground">High-end fashion house specializing in modern couture.</p>
+                        </div>
+                    </CardContent>
+                </Card>
+
                  <Card>
                     <CardHeader>
                         <CardTitle className="font-headline flex items-center justify-between">

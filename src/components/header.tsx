@@ -14,6 +14,7 @@ import {
   LogOut,
   Briefcase,
   PlusCircle,
+  LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from './logo';
@@ -33,7 +34,8 @@ const allNavLinks: NavLinkItem[] = [
   { href: '/recommendations', label: 'AI Recs', icon: Sparkles, roles: ['brand'] },
   { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['model', 'brand'] },
   { href: '/account/profile', label: 'My Profile', icon: User, roles: ['model'] },
-  { href: '/brand/dashboard', label: 'Dashboard', icon: User, roles: ['brand'] },
+  { href: '/brand/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['brand'] },
+  { href: '/brand/profile', label: 'My Profile', icon: User, roles: ['brand'] },
   { href: '/gigs/post', label: 'Post Gig', icon: PlusCircle, roles: ['brand'] },
 ];
 
@@ -48,8 +50,18 @@ export function Header() {
       setSession(sessionData);
 
       const currentRole = sessionData.isLoggedIn ? sessionData.role : 'guest';
-      const filteredLinks = allNavLinks.filter(link => link.roles.includes(currentRole));
+      
+      let filteredLinks = allNavLinks.filter(link => link.roles.includes(currentRole));
+
+      // A bit of a hack to not show both Dashboard and My Profile for brand
+      if (currentRole === 'brand') {
+          const hasDashboard = filteredLinks.some(l => l.href === '/brand/dashboard');
+          if(hasDashboard) {
+              filteredLinks = filteredLinks.filter(l => !(l.href === '/brand/profile' && pathname.startsWith('/brand/dashboard')))
+          }
+      }
       setVisibleLinks(filteredLinks);
+
     };
     fetchSession();
   }, [pathname]);
