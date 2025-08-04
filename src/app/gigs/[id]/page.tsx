@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertTriangle, Briefcase, MapPin, CalendarDays, Clock, Users, DollarSign, CheckCircle, XCircle, Palette, Ruler, Cake, UserCheck } from 'lucide-react';
+import { Loader2, AlertTriangle, Briefcase, MapPin, CalendarDays, Clock, Users, DollarSign, CheckCircle, XCircle, Palette, Ruler, Cake, UserCheck, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getSession } from '@/lib/auth-actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -79,6 +79,36 @@ export default function GigPage({ params }: GigPageProps) {
         return 'Paid';
     }
 
+    const GigStatusAlert = ({ status }: { status: Gig['status']}) => {
+        if (session?.role !== 'brand') return null;
+
+        switch (status) {
+            case 'Pending':
+                return (
+                    <Alert variant="default" className="mb-6 bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-300 [&>svg]:text-yellow-600">
+                        <Info className="h-4 w-4" />
+                        <AlertTitle>Pending Review</AlertTitle>
+                        <AlertDescription>
+                            This gig is currently pending review by our team and is not yet visible to models.
+                        </AlertDescription>
+                    </Alert>
+                )
+            case 'Rejected':
+                 return (
+                    <Alert variant="destructive" className="mb-6">
+                        <XCircle className="h-4 w-4" />
+                        <AlertTitle>Gig Rejected</AlertTitle>
+                        <AlertDescription>
+                            This gig did not meet our community guidelines and is not visible on the platform.
+                        </AlertDescription>
+                    </Alert>
+                )
+            default:
+                return null;
+        }
+    }
+
+
     if (loading) {
         return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin" /></div>;
     }
@@ -93,6 +123,19 @@ export default function GigPage({ params }: GigPageProps) {
                 </Alert>
             </div>
         );
+    }
+    
+    // Don't show non-verified gigs to models
+    if (session?.role === 'model' && gig.status !== 'Verified') {
+        return (
+             <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12 text-center">
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Gig Not Available</AlertTitle>
+                    <AlertDescription>This gig is currently not available for applications.</AlertDescription>
+                </Alert>
+            </div>
+        )
     }
     
     const InfoItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
@@ -115,6 +158,7 @@ export default function GigPage({ params }: GigPageProps) {
 
     return (
         <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
+            <GigStatusAlert status={gig.status} />
             <Card>
                 <CardHeader>
                     <div className="flex flex-col md:flex-row md:justify-between gap-4">
@@ -127,7 +171,7 @@ export default function GigPage({ params }: GigPageProps) {
                            {session?.role === 'model' && (
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button size="lg"><Briefcase className="mr-2"/> Apply Now</Button>
+                                    <Button size="lg" disabled={gig.status !== 'Verified'}><Briefcase className="mr-2"/> Apply Now</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>

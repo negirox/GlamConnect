@@ -16,7 +16,7 @@ const GIG_HEADERS = [
     'heightRangeMin', 'heightRangeMax', 'experienceLevel', 'bodyTypePreferences',
     'consentRequired', 'languageRequirement', 'portfolioLinkRequired',
     'moodBoardUrl', 'referenceImages', 'videoBriefLink', 'visibility',
-    'applicationDeadline', 'allowDirectMessaging', 'showBrandName'
+    'applicationDeadline', 'allowDirectMessaging', 'showBrandName', 'status'
 ];
 
 export type Gig = {
@@ -55,6 +55,7 @@ export type Gig = {
     applicationDeadline: string;
     allowDirectMessaging?: boolean;
     showBrandName?: boolean;
+    status: 'Pending' | 'Verified' | 'Rejected';
 }
 
 export type Application = {
@@ -120,13 +121,14 @@ function writeGigs(gigs: Gig[]) {
 }
 
 
-export async function createGig(gigData: Omit<Gig, 'id'>) {
+export async function createGig(gigData: Omit<Gig, 'id' | 'status'>) {
     const gigs = readGigs();
     const newId = (gigs.length > 0 ? Math.max(...gigs.map(g => parseInt(g.id, 10))) : 0) + 1;
     
     const newGig: Gig = {
         ...gigData,
         id: newId.toString(),
+        status: 'Pending',
     };
 
     gigs.push(newGig);

@@ -61,6 +61,13 @@ export default function BrandDashboardPage() {
         }
         fetchBrandData();
       }, [router])
+      
+    const statusColor: Record<Gig['status'], string> = {
+        Pending: 'bg-yellow-500',
+        Verified: 'bg-green-500',
+        Rejected: 'bg-red-500',
+    }
+
 
     if (loading) {
       return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin"/></div>
@@ -149,12 +156,15 @@ export default function BrandDashboardPage() {
                             <div className="space-y-4 pr-4">
                                 {gigs.length > 0 ? gigs.map((gig, i) => (
                                     <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
-                                        <div>
-                                            <p className="font-semibold truncate">{gig.title}</p>
-                                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                                <Clock className="h-3 w-3"/>
-                                                Ends: {new Date(gig.applicationDeadline).toLocaleDateString()}
-                                            </p>
+                                        <div className="flex items-center gap-3">
+                                            <span title={`Status: ${gig.status}`} className={`block h-3 w-3 rounded-full ${statusColor[gig.status]}`}></span>
+                                            <div>
+                                                <p className="font-semibold truncate">{gig.title}</p>
+                                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                                    <Clock className="h-3 w-3"/>
+                                                    Ends: {new Date(gig.applicationDeadline).toLocaleDateString()}
+                                                </p>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Badge variant="secondary">{gig.applicantCount} Applicants</Badge>

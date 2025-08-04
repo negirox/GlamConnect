@@ -140,8 +140,8 @@ export default function PostGigPage() {
             };
             await createGig(dataToSave as any);
             toast({
-                title: "Gig Posted!",
-                description: "Your new gig is now live for models to see.",
+                title: "Gig Submitted!",
+                description: "Your new gig is pending review and will be live once approved.",
             });
             router.push('/gigs');
         } catch (error: any) {
@@ -213,8 +213,7 @@ export default function PostGigPage() {
                                         <FormItem><FormLabel>Gender Preference</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select preference..." /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="Female">Female</SelectItem><SelectItem value="Male">Male</SelectItem>
-                                                    <SelectItem value="Trans">Trans</SelectItem><SelectItem value="Any">Any</SelectItem>
+                                                    <SelectItem value="Female">Female</SelectItem><SelectItem value="Male">Male</SelectItem><SelectItem value="Trans">Trans</SelectItem><SelectItem value="Any">Any</SelectItem>
                                                 </SelectContent>
                                             </Select><FormMessage />
                                         </FormItem>
