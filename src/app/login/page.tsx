@@ -65,7 +65,7 @@ export default function LoginPage() {
             });
             router.refresh(); 
 
-            if (result.role === 'brand') {
+            if (result?.role === 'brand') {
                 router.push('/brand/dashboard');
             } else {
                 router.push('/account/profile');
