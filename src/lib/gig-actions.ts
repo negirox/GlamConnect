@@ -137,3 +137,8 @@ export async function getGigs(): Promise<Gig[]> {
         return [];
     }
 }
+
+export async function getGigsByBrandId(brandId: string): Promise<Gig[]> {
+    const allGigs = await getGigs();
+    return allGigs.filter(gig => gig.brandId === brandId);
+}
