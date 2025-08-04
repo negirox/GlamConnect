@@ -85,18 +85,22 @@ export async function authenticate(
             path: '/',
         });
 
-        if (user.role === 'brand') {
-            redirect('/brand/dashboard');
-        } else {
-            redirect('/account/profile');
-        }
-
     } catch (error) {
         if ((error as Error).message.includes('credentialssignin')) {
             return 'CredentialSignin';
         }
         console.error(error);
         return 'An error occurred.';
+    }
+
+    const emailForRedirect = formData.get('email') as string;
+    const usersForRedirect = readUsers();
+    const userForRedirect = usersForRedirect.find(u => u.email === emailForRedirect);
+
+    if (userForRedirect?.role === 'brand') {
+        redirect('/brand/dashboard');
+    } else {
+        redirect('/account/profile');
     }
 }
 

@@ -14,11 +14,13 @@ import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { authenticate } from "@/lib/auth-actions";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 function LoginButton() {
     const { pending } = useFormStatus();
     return (
         <Button type="submit" className="w-full" aria-disabled={pending}>
+            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Login
         </Button>
     )
