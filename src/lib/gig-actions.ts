@@ -9,7 +9,8 @@ const gigsCsvFilePath = path.join(process.cwd(), 'public', 'gigs.csv');
 const GIG_HEADERS = [
     'id', 'title', 'description', 'location', 'date', 'brandId', 'brandName',
     'projectType', 'category', 'modelsNeeded', 'isGroupShoot', 'timing',
-    'travelProvided', 'accommodationProvided'
+    'travelProvided', 'accommodationProvided', 'paymentType', 'budgetMin', 
+    'budgetMax', 'paymentMode', 'paymentTimeline'
 ];
 
 export type Gig = {
@@ -27,6 +28,11 @@ export type Gig = {
     timing: string;
     travelProvided?: boolean;
     accommodationProvided?: boolean;
+    paymentType: 'Paid' | 'TFP' | 'Exposure';
+    budgetMin?: number;
+    budgetMax?: number;
+    paymentMode?: 'Bank' | 'Cash' | 'UPI' | 'Other';
+    paymentTimeline?: string;
 }
 
 function readGigs(): Gig[] {
@@ -45,8 +51,8 @@ function readGigs(): Gig[] {
         const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         const entry = headers.reduce((obj, header, index) => {
             const rawValue = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
-            if (header === 'modelsNeeded') {
-                (obj as any)[header] = parseInt(rawValue, 10) || 0;
+            if (['modelsNeeded', 'budgetMin', 'budgetMax'].includes(header)) {
+                (obj as any)[header] = rawValue ? parseInt(rawValue, 10) : undefined;
             } else if (['isGroupShoot', 'travelProvided', 'accommodationProvided'].includes(header)) {
                 (obj as any)[header] = rawValue.toLowerCase() === 'true';
             } else {

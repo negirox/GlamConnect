@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, PlusCircle, Calendar, MapPin, Clock } from "lucide-react";
+import { Loader2, PlusCircle, Calendar, MapPin, Clock, DollarSign } from "lucide-react";
 import { getSession } from "@/lib/auth-actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -48,6 +48,27 @@ const gigSchema = z.object({
     timing: z.string().min(1, "Please provide shoot timing"),
     travelProvided: z.string().optional(),
     accommodationProvided: z.string().optional(),
+    paymentType: z.enum(['Paid', 'TFP', 'Exposure'], { required_error: "Please select a payment type" }),
+    budgetMin: z.coerce.number().optional(),
+    budgetMax: z.coerce.number().optional(),
+    paymentMode: z.string().optional(),
+    paymentTimeline: z.string().optional(),
+}).refine(data => {
+    if (data.paymentType === 'Paid') {
+        return data.budgetMin !== undefined && data.budgetMax !== undefined;
+    }
+    return true;
+}, {
+    message: "Budget range is required for paid projects.",
+    path: ["budgetMin"],
+}).refine(data => {
+    if (data.paymentType === 'Paid' && data.budgetMin && data.budgetMax) {
+        return data.budgetMax >= data.budgetMin;
+    }
+    return true;
+}, {
+    message: "Maximum budget must be greater than or equal to minimum budget.",
+    path: ["budgetMax"],
 });
 
 export default function PostGigPage() {
@@ -69,8 +90,11 @@ export default function PostGigPage() {
             timing: "",
             travelProvided: 'false',
             accommodationProvided: 'false',
+            paymentTimeline: "",
         },
     });
+
+    const paymentType = form.watch('paymentType');
 
     async function onSubmit(values: z.infer<typeof gigSchema>) {
         setIsLoading(true);
@@ -90,7 +114,7 @@ export default function PostGigPage() {
                 travelProvided: values.travelProvided === 'true',
                 accommodationProvided: values.accommodationProvided === 'true',
             };
-            await createGig(dataToSave);
+            await createGig(dataToSave as any);
             toast({
                 title: "Gig Posted!",
                 description: "Your new gig is now live for models to see.",
@@ -114,7 +138,7 @@ export default function PostGigPage() {
                 <p className="text-muted-foreground">Reach thousands of professional models by posting your job opportunity below.</p>
             </div>
              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Basic Details</CardTitle>
@@ -226,7 +250,7 @@ export default function PostGigPage() {
                         </CardContent>
                     </Card>
                     
-                    <Card className="mt-6">
+                    <Card>
                         <CardHeader>
                             <CardTitle>Location & Schedule</CardTitle>
                         </CardHeader>
@@ -304,6 +328,87 @@ export default function PostGigPage() {
                                     )}
                                 />
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Budget & Payment</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                             <FormField
+                                control={form.control}
+                                name="paymentType"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-3">
+                                        <FormLabel>Payment Type</FormLabel>
+                                        <FormControl>
+                                            <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                                <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Paid" /></FormControl><FormLabel className="font-normal">Paid</FormLabel></FormItem>
+                                                <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="TFP" /></FormControl><FormLabel className="font-normal">TFP (Trade)</FormLabel></FormItem>
+                                                <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Exposure" /></FormControl><FormLabel className="font-normal">Exposure Only</FormLabel></FormItem>
+                                            </RadioGroup>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            {paymentType === 'Paid' && (
+                                <div className="grid grid-cols-2 gap-6">
+                                     <FormField
+                                        control={form.control}
+                                        name="budgetMin"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Budget Min ($)</FormLabel>
+                                                <FormControl><Input type="number" placeholder="e.g. 500" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="budgetMax"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Budget Max ($)</FormLabel>
+                                                <FormControl><Input type="number" placeholder="e.g. 1500" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
+                             <FormField
+                                control={form.control}
+                                name="paymentMode"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Payment Mode (Optional)</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Select mode..." /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Bank">Bank Transfer</SelectItem>
+                                                <SelectItem value="Cash">Cash</SelectItem>
+                                                <SelectItem value="UPI">UPI</SelectItem>
+                                                <SelectItem value="Other">Other</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="paymentTimeline"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Payment Timeline (Optional)</FormLabel>
+                                        <FormControl><Input placeholder="e.g., Same day, Within 7 business days" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </CardContent>
                         <CardFooter>
                             <Button type="submit" disabled={isLoading} className="w-full" size="lg">

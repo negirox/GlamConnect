@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { getGigs, Gig } from "@/lib/gig-actions";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarDays, Briefcase, Building, Users } from "lucide-react";
+import { MapPin, CalendarDays, Briefcase, Building, Users, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -22,6 +22,19 @@ export default function GigsPage() {
         }
         fetchGigs();
     }, []);
+
+    const formatBudget = (gig: Gig) => {
+        if (gig.paymentType !== 'Paid') {
+            return gig.paymentType;
+        }
+        if (gig.budgetMin && gig.budgetMax) {
+            if (gig.budgetMin === gig.budgetMax) {
+                return `$${gig.budgetMin}`;
+            }
+            return `$${gig.budgetMin} - $${gig.budgetMax}`;
+        }
+        return 'Paid';
+    }
 
     return (
         <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
@@ -76,6 +89,10 @@ export default function GigsPage() {
                                     <div className="flex items-center gap-2">
                                         <Users className="h-4 w-4" />
                                         <span>{gig.modelsNeeded} model(s)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 font-semibold">
+                                        <DollarSign className="h-4 w-4 text-green-600"/>
+                                        <span>{formatBudget(gig)}</span>
                                     </div>
                                 </div>
                             </CardContent>
