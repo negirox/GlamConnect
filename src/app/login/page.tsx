@@ -10,64 +10,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
+import { authenticate } from "@/lib/auth-actions";
+import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { login } from "@/lib/auth-actions";
-import { useToast } from "@/hooks/use-toast";
 
-const loginSchema = z.object({
-  email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(1, { message: "Password is required." }),
-});
+function LoginButton() {
+    const { pending } = useFormStatus();
+    return (
+        <Button type="submit" className="w-full" aria-disabled={pending}>
+            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Login
+        </Button>
+    )
+}
 
 export default function LoginPage() {
-    const router = useRouter();
-    const { toast } = useToast();
-    const [isLoading, setIsLoading] = useState(false);
-    
-    const form = useForm<z.infer<typeof loginSchema>>({
-        resolver: zodResolver(loginSchema),
-        defaultValues: {
-            email: "",
-            password: "",
-        },
-    });
-
-    async function onSubmit(values: z.infer<typeof loginSchema>) {
-        setIsLoading(true);
-        const result = await login(values);
-        
-        if (result?.error) {
-            toast({
-                title: "Login Failed",
-                description: result.error,
-                variant: "destructive",
-            });
-            setIsLoading(false);
-        } else {
-             toast({
-                title: "Login Successful!",
-                description: "Welcome back!",
-            });
-            router.refresh(); 
-            router.push('/account/profile');
-        }
-    }
-
+  const [errorMessage, dispatch] = useFormState(authenticate, undefined);
 
   return (
     <div className="container mx-auto flex h-[calc(100vh-8rem)] items-center justify-center px-4 md:px-6">
@@ -79,45 +39,28 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="m@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
+            <form action={dispatch} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" name="email" placeholder="m@example.com" required />
+                </div>
+                <div className="space-y-2">
                     <div className="flex items-center">
-                        <FormLabel>Password</FormLabel>
+                        <Label htmlFor="password">Password</Label>
                         <Link href="#" className="ml-auto inline-block text-sm underline">
                             Forgot your password?
                         </Link>
                     </div>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                    <Input id="password" type="password" name="password" required />
+                </div>
+                
+                {errorMessage && (
+                    <div className="flex items-center gap-2">
+                        <p className="text-sm text-red-500">{errorMessage}</p>
+                    </div>
                 )}
-              />
-               <Button type="submit" className="w-full" disabled={isLoading}>
-                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Login
-              </Button>
+                <LoginButton />
             </form>
-          </Form>
           <div className="mt-4 text-center text-sm">
             Don't have an account?{" "}
             <Link href="/signup" className="underline">
@@ -129,5 +72,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

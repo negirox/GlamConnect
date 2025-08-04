@@ -29,8 +29,9 @@ import { useRouter } from "next/navigation";
 import { createUser } from "@/lib/user-actions"; 
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -65,14 +66,25 @@ export default function SignupPage() {
         setIsLoading(true);
         setError(null);
         try {
-            await createUser(values);
-            toast({
-              title: "Account Created!",
-              description: "You can now log in with your new account.",
-            });
-            router.push('/login');
+            const userResult = await createUser(values);
+            
+            if (userResult.success && userResult.user) {
+                toast({
+                  title: "Account Created!",
+                  description: "Redirecting you to login...",
+                });
+                router.push('/login');
+
+            } else {
+                 throw new Error(userResult.message || 'An unknown error occurred.');
+            }
         } catch (err: any) {
             setError(err.message);
+            toast({
+                title: "Signup Failed",
+                description: err.message,
+                variant: "destructive",
+            });
         } finally {
             setIsLoading(false);
         }
@@ -99,7 +111,7 @@ export default function SignupPage() {
                     <FormItem>
                         <FormLabel>Name</FormLabel>
                         <FormControl>
-                        <Input placeholder="Your Name" {...field} />
+                        <Input placeholder="Your Name or Brand Name" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -156,7 +168,7 @@ export default function SignupPage() {
                               <RadioGroupItem value="brand" />
                             </FormControl>
                             <FormLabel className="font-normal">
-                              Brand
+                              Brand / Agency
                             </FormLabel>
                           </FormItem>
                         </RadioGroup>
@@ -249,7 +261,7 @@ export default function SignupPage() {
                 <p>The GlamConnect platform is provided "as is" without any warranties. We do not guarantee that you will secure modeling work. To the fullest extent permitted by law, GlamConnect shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues.</p>
 
                 <h4>8. Termination</h4>
-                <p>We reserve the right to suspend or terminate your account at any time, without notice, for any reason, including but not limited to a breach of this Agreement.</p>
+                <p>We reserve the right to suspend or terminate your account at any time, without notice, for any reason, including but not to a breach of this Agreement.</p>
 
                 <h4>9. Changes to Terms</h4>
                 <p>We may modify this Agreement from time to time. We will notify you of any changes by posting the new Agreement on this page. Your continued use of the platform after any such change constitutes your acceptance of the new Agreement.</p>

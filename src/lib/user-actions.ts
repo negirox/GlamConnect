@@ -6,6 +6,7 @@ import path from 'path';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createModelForUser } from './model-actions';
+import { createBrandForUser } from './brand-actions';
 import type { Model } from './mock-data';
 
 const usersCsvFilePath = path.join(process.cwd(), 'public', 'users.csv');
@@ -81,7 +82,6 @@ export async function createUser(userData: z.infer<typeof signupSchema>) {
     users.push(newUser);
     writeUsers(headers, users);
 
-    // If the new user is a model, create a corresponding model profile
     if (newUser.role === 'model') {
         const newModelData: Partial<Model> = {
             id: newUser.id,
@@ -89,12 +89,18 @@ export async function createUser(userData: z.infer<typeof signupSchema>) {
             email: newUser.email,
         };
         await createModelForUser(newModelData);
+    } else if (newUser.role === 'brand') {
+        await createBrandForUser({
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+        })
     }
 
     revalidatePath('/login');
     revalidatePath('/signup');
 
-    return { success: true, message: 'User created successfully.' };
+    return { success: true, message: 'User created successfully.', user: newUser };
 }
 
 export async function getUser(email: string) {
