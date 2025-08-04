@@ -12,7 +12,7 @@ import { getBrandByEmail, Brand } from "@/lib/brand-actions";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { getGigsByBrandId, Gig } from "@/lib/gig-actions";
+import { getGigsByBrandId, Gig, getApplicantsByGigId } from "@/lib/gig-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
@@ -21,10 +21,12 @@ const savedLists = [
     { name: "Potential Runway Models", count: 18 },
 ]
 
+type GigWithApplicantCount = Gig & { applicantCount: number };
+
 
 export default function BrandDashboardPage() {
     const [brand, setBrand] = useState<Brand | null>(null);
-    const [gigs, setGigs] = useState<Gig[]>([]);
+    const [gigs, setGigs] = useState<GigWithApplicantCount[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     
@@ -42,7 +44,13 @@ export default function BrandDashboardPage() {
                 setBrand(fetchedBrand);
                 if (fetchedBrand) {
                     const fetchedGigs = await getGigsByBrandId(fetchedBrand.id);
-                    setGigs(fetchedGigs);
+                    const gigsWithCounts = await Promise.all(
+                        fetchedGigs.map(async (gig) => {
+                            const applicants = await getApplicantsByGigId(gig.id);
+                            return { ...gig, applicantCount: applicants.length };
+                        })
+                    );
+                    setGigs(gigsWithCounts);
                 }
             } catch (error) {
                 console.error("Failed to fetch brand data:", error);
@@ -149,7 +157,7 @@ export default function BrandDashboardPage() {
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Badge variant="secondary">0 Applicants</Badge>
+                                            <Badge variant="secondary">{gig.applicantCount} Applicants</Badge>
                                             <Button variant="outline" size="sm" asChild>
                                                 <Link href={`/gigs/${gig.id}`}>View</Link>
                                             </Button>

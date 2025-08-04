@@ -6,6 +6,8 @@ import path from 'path';
 import { revalidatePath } from 'next/cache';
 
 const gigsCsvFilePath = path.join(process.cwd(), 'public', 'gigs.csv');
+const applicationsCsvFilePath = path.join(process.cwd(), 'public', 'applications.csv');
+
 const GIG_HEADERS = [
     'id', 'title', 'description', 'location', 'date', 'brandId', 'brandName',
     'projectType', 'genderPreference', 'modelsNeeded', 'isGroupShoot', 'timing',
@@ -53,6 +55,12 @@ export type Gig = {
     applicationDeadline: string;
     allowDirectMessaging?: boolean;
     showBrandName?: boolean;
+}
+
+export type Application = {
+    gigId: string;
+    modelId: string;
+    date: string;
 }
 
 function readGigs(): Gig[] {
@@ -146,4 +154,56 @@ export async function getGigsByBrandId(brandId: string): Promise<Gig[]> {
 export async function getGigById(id: string): Promise<Gig | null> {
     const allGigs = await getGigs();
     return allGigs.find(gig => gig.id === id) || null;
+}
+
+// Application Functions
+
+function readApplications(): Application[] {
+    const headers = ['gigId', 'modelId', 'date'];
+    if(!fs.existsSync(applicationsCsvFilePath)) {
+        fs.writeFileSync(applicationsCsvFilePath, headers.join(',') + '\n', 'utf-8');
+        return [];
+    }
+    const csvData = fs.readFileSync(applicationsCsvFilePath, 'utf-8');
+    const lines = csvData.trim().split('\n');
+    if (lines.length <= 1) return [];
+
+    return lines.slice(1).map(line => {
+        const [gigId, modelId, date] = line.split(',');
+        return { gigId, modelId, date };
+    });
+}
+
+function writeApplications(applications: Application[]) {
+    const headers = ['gigId', 'modelId', 'date'];
+    const headerString = headers.join(',');
+    const rows = applications.map(app => [app.gigId, app.modelId, app.date].join(','));
+    const csvString = [headerString, ...rows].join('\n') + '\n';
+    fs.writeFileSync(applicationsCsvFilePath, csvString, 'utf-8');
+}
+
+export async function applyForGig(gigId: string, modelId: string) {
+    const applications = readApplications();
+    const existingApplication = applications.find(app => app.gigId === gigId && app.modelId === modelId);
+
+    if (existingApplication) {
+        throw new Error('You have already applied for this gig.');
+    }
+
+    const newApplication: Application = {
+        gigId,
+        modelId,
+        date: new Date().toISOString(),
+    };
+
+    applications.push(newApplication);
+    writeApplications(applications);
+
+    revalidatePath(`/gigs/${gigId}`);
+    revalidatePath('/brand/dashboard');
+}
+
+export async function getApplicantsByGigId(gigId: string): Promise<Application[]> {
+    const applications = readApplications();
+    return applications.filter(app => app.gigId === gigId);
 }

@@ -2,13 +2,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getGigById, Gig } from '@/lib/gig-actions';
+import { getGigById, Gig, applyForGig, getApplicantsByGigId } from '@/lib/gig-actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle, Briefcase, MapPin, CalendarDays, Clock, Users, DollarSign, CheckCircle, XCircle, Palette, Ruler, Cake, UserCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getSession } from '@/lib/auth-actions';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+
 
 type GigPageProps = {
   params: { id: string };
@@ -17,17 +23,49 @@ type GigPageProps = {
 export default function GigPage({ params }: GigPageProps) {
     const [gig, setGig] = useState<Gig | null>(null);
     const [loading, setLoading] = useState(true);
+    const [session, setSession] = useState<any>(null);
+    const [isApplying, setIsApplying] = useState(false);
+    const [hasConsented, setHasConsented] = useState(false);
+    const { toast } = useToast();
+
 
     useEffect(() => {
-        async function fetchGig() {
+        async function fetchData() {
             setLoading(true);
-            const fetchedGig = await getGigById(params.id);
+            const [fetchedGig, sessionData] = await Promise.all([
+                getGigById(params.id),
+                getSession()
+            ]);
             setGig(fetchedGig);
+            setSession(sessionData);
             setLoading(false);
         }
-        fetchGig();
+        fetchData();
     }, [params.id]);
     
+    const handleApply = async () => {
+        if (!gig || !session.isLoggedIn || !session.id) {
+             toast({ title: 'Error', description: 'You must be logged in to apply.', variant: 'destructive'});
+             return;
+        }
+        setIsApplying(true);
+        try {
+            await applyForGig(gig.id, session.id);
+            toast({
+                title: 'Application Sent!',
+                description: 'The brand has received your application.',
+            });
+        } catch (error: any) {
+            toast({
+                title: 'Error',
+                description: error.message || 'Failed to submit application.',
+                variant: 'destructive'
+            });
+        } finally {
+            setIsApplying(false);
+        }
+    }
+
     const formatBudget = (gig: Gig) => {
         if (gig.paymentType !== 'Paid') {
             return gig.paymentType;
@@ -86,7 +124,32 @@ export default function GigPage({ params }: GigPageProps) {
                             <CardDescription className="pt-2">Posted by {gig.brandName}</CardDescription>
                         </div>
                         <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
-                           <Button size="lg"><Briefcase className="mr-2"/> Apply Now</Button>
+                           {session?.role === 'model' && (
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button size="lg"><Briefcase className="mr-2"/> Apply Now</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Confirm Application</DialogTitle>
+                                        <DialogDescription>
+                                            By applying, you agree to share your public profile and portfolio with {gig.brandName} for consideration for this gig.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="flex items-center space-x-2 my-4">
+                                        <Checkbox id="terms" checked={hasConsented} onCheckedChange={(checked) => setHasConsented(Boolean(checked))} />
+                                        <Label htmlFor="terms">I understand and consent to sharing my profile.</Label>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                                        <Button onClick={handleApply} disabled={isApplying || !hasConsented}>
+                                            {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                            Submit Application
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                           )}
                            <p className="text-sm text-destructive font-semibold flex items-center gap-2">
                                 <Clock className="h-4 w-4"/>
                                 Apply by: {new Date(gig.applicationDeadline).toLocaleDateString()}
@@ -144,4 +207,3 @@ export default function GigPage({ params }: GigPageProps) {
         </div>
     );
 }
-
