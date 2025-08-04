@@ -9,11 +9,6 @@ import { z } from 'zod';
 
 const usersCsvFilePath = path.join(process.cwd(), 'public', 'users.csv');
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
-
 type User = {
     id: string;
     name: string;
@@ -21,7 +16,6 @@ type User = {
     password?: string;
     role: 'model' | 'brand';
 }
-
 
 function readUsers(): User[] {
   if (!fs.existsSync(usersCsvFilePath)) {
@@ -62,37 +56,50 @@ export async function getSession() {
   }
 }
 
-export async function login(values: z.infer<typeof loginSchema>) {
-  const validatedFields = loginSchema.safeParse(values);
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+    try {
+        const email = formData.get('email') as string;
+        const password = formData.get('password') as string;
 
-  if (!validatedFields.success) {
-    return { error: 'Invalid fields!' };
-  }
+        const users = readUsers();
+        const user = users.find(u => u.email === email);
 
-  const { email, password } = validatedFields.data;
-  const users = readUsers();
-  const user = users.find(u => u.email === email);
+        if (!user || user.password !== password) {
+            return 'Invalid email or password';
+        }
 
-  if (!user || user.password !== password) {
-    return { error: 'Invalid email or password' };
-  }
+        const sessionData = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+        };
+        
+        cookies().set('session', JSON.stringify(sessionData), {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 60 * 60 * 24 * 7, // One week
+            path: '/',
+        });
 
-  const sessionData = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-  };
-  
-  cookies().set('session', JSON.stringify(sessionData), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7, // One week
-    path: '/',
-  });
+        if (user.role === 'brand') {
+            redirect('/brand/dashboard');
+        } else {
+            redirect('/account/profile');
+        }
 
-  return { success: true };
+    } catch (error) {
+        if ((error as Error).message.includes('credentialssignin')) {
+            return 'CredentialSignin';
+        }
+        console.error(error);
+        return 'An error occurred.';
+    }
 }
+
 
 export async function logout() {
   cookies().delete('session');
