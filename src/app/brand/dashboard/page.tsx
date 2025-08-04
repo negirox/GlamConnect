@@ -150,7 +150,9 @@ export default function BrandDashboardPage() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Badge variant="secondary">0 Applicants</Badge>
-                                            <Button variant="outline" size="sm">View</Button>
+                                            <Button variant="outline" size="sm" asChild>
+                                                <Link href={`/gigs/${gig.id}`}>View</Link>
+                                            </Button>
                                         </div>
                                     </div>
                                 )) : (

@@ -142,3 +142,8 @@ export async function getGigsByBrandId(brandId: string): Promise<Gig[]> {
     const allGigs = await getGigs();
     return allGigs.filter(gig => gig.brandId === brandId);
 }
+
+export async function getGigById(id: string): Promise<Gig | null> {
+    const allGigs = await getGigs();
+    return allGigs.find(gig => gig.id === id) || null;
+}
