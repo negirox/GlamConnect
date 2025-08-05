@@ -15,21 +15,37 @@ import { AlertTriangle } from "lucide-react";
 import { getGigsByBrandId, Gig, getApplicantsByGigId } from "@/lib/gig-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { getListsByBrandId, createList, SavedList } from "@/lib/saved-list-actions";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from 'zod';
+import { useToast } from "@/hooks/use-toast";
 
-const savedLists = [
-    { name: "Swimwear Campaign Favorites", count: 5 },
-    { name: "Potential Runway Models", count: 18 },
-]
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
+
+const newListSchema = z.object({
+  name: z.string().min(1, 'List name cannot be empty.'),
+});
 
 
 export default function BrandDashboardPage() {
     const [brand, setBrand] = useState<Brand | null>(null);
     const [gigs, setGigs] = useState<GigWithApplicantCount[]>([]);
+    const [savedLists, setSavedLists] = useState<SavedList[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isListDialogOpen, setIsListDialogOpen] = useState(false);
     const router = useRouter();
+    const { toast } = useToast();
     
+    const newListForm = useForm<z.infer<typeof newListSchema>>({
+        resolver: zodResolver(newListSchema),
+        defaultValues: { name: '' },
+    });
+
     useEffect(() => {
         const fetchBrandData = async () => {
             setLoading(true);
@@ -38,19 +54,25 @@ export default function BrandDashboardPage() {
                 router.push('/login');
                 return;
             }
-
+    
             try {
                 const fetchedBrand = await getBrandByEmail(session.email);
                 setBrand(fetchedBrand);
                 if (fetchedBrand) {
-                    const fetchedGigs = await getGigsByBrandId(fetchedBrand.id);
-                    const gigsWithCounts = await Promise.all(
-                        fetchedGigs.map(async (gig) => {
-                            const applicants = await getApplicantsByGigId(gig.id);
-                            return { ...gig, applicantCount: applicants.length };
-                        })
+                    const [fetchedGigs, fetchedLists] = await Promise.all([
+                        getGigsByBrandId(fetchedBrand.id),
+                        getListsByBrandId(fetchedBrand.id)
+                    ]);
+    
+                    const gigsWithApplicantCounts = await Promise.all(
+                      fetchedGigs.map(async (gig) => {
+                        const applicants = await getApplicantsByGigId(gig.id);
+                        return { ...gig, applicantCount: applicants.length };
+                      })
                     );
-                    setGigs(gigsWithCounts);
+    
+                    setGigs(gigsWithApplicantCounts);
+                    setSavedLists(fetchedLists);
                 }
             } catch (error) {
                 console.error("Failed to fetch brand data:", error);
@@ -60,7 +82,23 @@ export default function BrandDashboardPage() {
             }
         }
         fetchBrandData();
-      }, [router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+    
+    const onNewListSubmit = async (values: z.infer<typeof newListSchema>) => {
+        if (!brand) return;
+        try {
+            const newList = await createList(brand.id, values.name);
+            toast({ title: "Success", description: `List "${values.name}" created.` });
+            newListForm.reset();
+            setIsListDialogOpen(false);
+            const fetchedLists = await getListsByBrandId(brand.id); // Re-fetch lists
+            setSavedLists(fetchedLists);
+            router.push(`/brand/saved-lists/${newList.id}/add`);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to create list.", variant: "destructive" });
+        }
+    };
       
     const statusColor: Record<Gig['status'], string> = {
         Pending: 'bg-yellow-500',
@@ -155,10 +193,10 @@ export default function BrandDashboardPage() {
                         <ScrollArea className="h-60">
                             <div className="space-y-4 pr-4">
                                 {gigs.length > 0 ? gigs.map((gig, i) => (
-                                    <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <span title={`Status: ${gig.status}`} className={`block h-3 w-3 rounded-full ${statusColor[gig.status]}`}></span>
-                                            <div>
+                                    <div key={i} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-primary/20 rounded-lg gap-3">
+                                        <div className="flex items-start gap-3">
+                                            <span title={`Status: ${gig.status}`} className={`block h-3 w-3 rounded-full mt-1.5 shrink-0 ${statusColor[gig.status]}`}></span>
+                                            <div className="overflow-hidden">
                                                 <p className="font-semibold truncate">{gig.title}</p>
                                                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                                                     <Clock className="h-3 w-3"/>
@@ -166,7 +204,7 @@ export default function BrandDashboardPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                                             <Badge variant="secondary">{gig.applicantCount} Applicants</Badge>
                                             <Button variant="outline" size="sm" asChild>
                                                 <Link href={`/gigs/${gig.id}`}>View</Link>
@@ -187,21 +225,53 @@ export default function BrandDashboardPage() {
                     <CardHeader>
                         <CardTitle className="font-headline flex items-center justify-between">
                             <span>Saved Model Lists</span>
-                            <Button variant="outline"><PlusCircle className="mr-2"/>New List</Button>
+                             <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline"><PlusCircle className="mr-2"/>New List</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Create a New List</DialogTitle>
+                                        <DialogDescription>Give your new list of saved models a descriptive name. You can add models after creating the list.</DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={newListForm.handleSubmit(onNewListSubmit)}>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="name" className="text-right">Name</Label>
+                                                <Input id="name" {...newListForm.register('name')} className="col-span-3" />
+                                            </div>
+                                            {newListForm.formState.errors.name && <p className="col-span-4 text-center text-sm text-destructive">{newListForm.formState.errors.name.message}</p>}
+                                        </div>
+                                        <DialogFooter>
+                                            <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
+                                            <Button type="submit" disabled={newListForm.formState.isSubmitting}>
+                                                {newListForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                                Create & Add Models
+                                            </Button>
+                                        </DialogFooter>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
                         </CardTitle>
                         <CardDescription>Organize your favorite models into shortlists for future projects.</CardDescription>
                     </CardHeader>
                     <CardContent>
                          <div className="space-y-4">
-                            {savedLists.map((list, i) => (
-                                <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
-                                    <div>
+                            {savedLists.length > 0 ? savedLists.map((list, i) => (
+                                <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
+                                    <Link href={`/brand/saved-lists/${list.id}`} className="flex-1">
                                         <p className="font-semibold">{list.name}</p>
-                                        <p className="text-sm text-muted-foreground">{list.count} Models</p>
-                                    </div>
-                                    <Button variant="outline" size="sm">View</Button>
+                                        <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
+                                    </Link>
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={`/brand/saved-lists/${list.id}`}>View</Link>
+                                    </Button>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="text-center text-muted-foreground pt-8">
+                                    <p>You haven't created any saved lists yet.</p>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
