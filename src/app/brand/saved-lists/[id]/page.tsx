@@ -1,22 +1,33 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getListById, SavedList, removeModelFromList, deleteList } from '@/lib/saved-list-actions';
-import { getModelById, Model } from '@/lib/data-actions';
-import { ModelCard } from '@/components/model-card';
-import { Loader2, ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
+import { getListById, removeModelFromList, SavedList } from '@/lib/saved-list-actions';
+import { getModelById } from '@/lib/data-actions';
+import { Model } from '@/lib/mock-data';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { ModelCard } from '@/components/model-card';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-type ListPageProps = {
+type SavedListPageProps = {
     params: { id: string };
 };
 
-export default function SavedListPage({ params }: ListPageProps) {
+export default function SavedListPage({ params }: SavedListPageProps) {
     const [list, setList] = useState<SavedList | null>(null);
     const [models, setModels] = useState<Model[]>([]);
     const [loading, setLoading] = useState(true);
@@ -25,62 +36,41 @@ export default function SavedListPage({ params }: ListPageProps) {
     const { toast } = useToast();
     const router = useRouter();
 
+  const listId = params.id;
+
     useEffect(() => {
-        async function fetchListData() {
-            if (!params.id) return;
+    async function fetchListData(id: string) {
             setLoading(true);
             try {
-                const fetchedList = await getListById(params.id);
+            const fetchedList = await getListById(id);
                 if (fetchedList) {
                     setList(fetchedList);
                     const modelPromises = fetchedList.modelIds.map(id => getModelById(id));
-                    const fetchedModels = (await Promise.all(modelPromises)).filter(m => m !== undefined) as Model[];
-                    setModels(fetchedModels);
-                } else {
-                    setList(null);
-                    setModels([]);
+                const resolvedModels = (await Promise.all(modelPromises)).filter(Boolean) as Model[];
+                setModels(resolvedModels);
                 }
             } catch (error) {
-                console.error("Failed to fetch list data:", error);
-                toast({ title: "Error", description: "Could not fetch list data.", variant: "destructive" });
+            console.error(error);
+            toast({ title: "Error", description: "Failed to fetch list data.", variant: "destructive" });
             } finally {
                 setLoading(false);
             }
+    }
+    if (listId) {
+        fetchListData(listId);
         }
-        fetchListData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [params.id]);
+  }, [listId, toast]);
 
     const handleRemoveModel = async (modelId: string) => {
         if (!list) return;
         setRemovingModelId(modelId);
         try {
             await removeModelFromList(list.id, modelId);
-            toast({ title: "Model Removed", description: "The model has been removed from this list." });
-            const updatedList = await getListById(list.id);
-            if (updatedList) {
-                setList(updatedList);
-                const modelPromises = updatedList.modelIds.map(id => getModelById(id));
-                const fetchedModels = (await Promise.all(modelPromises)).filter(m => m !== undefined) as Model[];
-                setModels(fetchedModels);
-            }
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Failed to remove model.", variant: "destructive" });
-        } finally {
-            setRemovingModelId(null);
-        }
-    };
-    
-    const handleDeleteList = async () => {
-        if(!list) return;
-        setIsDeleting(true);
-        try {
-            await deleteList(list.id);
-            toast({ title: "List Deleted", description: `The list "${list.name}" has been deleted.`});
-            router.push('/brand/dashboard');
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Failed to delete list.", variant: "destructive" });
-            setIsDeleting(false);
+        setModels(prev => prev.filter(m => m.id !== modelId));
+        toast({ title: "Model Removed", description: "The model has been removed from your list." });
+    } catch (error) {
+        console.error(error);
+        toast({ title: "Error", description: "Failed to remove model.", variant: "destructive" });
         }
     }
 
@@ -89,27 +79,26 @@ export default function SavedListPage({ params }: ListPageProps) {
     }
 
     if (!list) {
-        return <div className="container text-center py-12">List not found. It may have been deleted.</div>;
+    return <div className="container text-center py-12">List not found.</div>;
     }
 
     return (
-        <div className="container mx-auto max-w-6xl px-4 md:px-6 py-12">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                <div>
-                    <Button variant="ghost" size="sm" asChild className="mb-2">
+    <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
+        <div className="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4">
+             <Button variant="ghost" size="sm" asChild className="mb-2 self-start">
                         <Link href="/brand/dashboard">
                             <ArrowLeft className="mr-2"/>
                             Back to Dashboard
                         </Link>
                     </Button>
-                    <h1 className="text-4xl font-headline font-bold">{list.name}</h1>
-                    <p className="text-muted-foreground mt-2">{models.length} model(s) in this list.</p>
+            <div className='text-center md:text-left'>
+                <h1 className="text-3xl font-headline font-bold">{list.name}</h1>
+                <p className="text-muted-foreground mt-1">{list.modelIds.length} model(s) in this list</p>
                 </div>
                 <div className="flex gap-2">
                     <Button asChild>
                         <Link href={`/brand/saved-lists/${list.id}/add`}>
-                            <PlusCircle className="mr-2"/>
-                            Add Models
+                    <PlusCircle className="mr-2"/> Add Models
                         </Link>
                     </Button>
                      <Dialog>
@@ -136,29 +125,44 @@ export default function SavedListPage({ params }: ListPageProps) {
             </div>
 
             {models.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                     {models.map(model => (
                         <div key={model.id} className="relative group">
                             <ModelCard model={model} />
-                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button 
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleRemoveModel(model.id)}
-                                    disabled={removingModelId === model.id}
-                                >
-                                    {removingModelId === model.id ? <Loader2 className="animate-spin"/> : <Trash2/>}
-                                    <span className="ml-2">Remove</span>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                    <Trash2 className="h-4 w-4"/>
                                 </Button>
-                            </div>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently remove {model.name} from this list. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleRemoveModel(model.id)}>Remove</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                         </div>
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-24 bg-card rounded-lg">
-                    <p className="font-semibold text-lg">This list is empty.</p>
-                    <p className="text-muted-foreground mt-2">Start by adding models to build your collection.</p>
-                </div>
+            <Card className="text-center py-20">
+                <CardHeader>
+                    <CardTitle>This List is Empty</CardTitle>
+                    <CardDescription>Start by adding models to build your shortlist.</CardDescription>
+                </CardHeader>
+                <CardFooter className="justify-center">
+                    <Button asChild>
+                        <Link href="/search">Search for Models</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
             )}
         </div>
     );

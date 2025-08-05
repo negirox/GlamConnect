@@ -1,17 +1,18 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { ModelCard } from '@/components/model-card';
-import { Model } from '@/lib/mock-data';
-import { getModels } from '@/lib/data-actions';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getListById, SavedList, addModelToList } from '@/lib/saved-list-actions';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { getListById, addModelsToList, SavedList } from '@/lib/saved-list-actions';
+import { getModels } from '@/lib/data-actions';
+import { Model } from '@/lib/mock-data';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, ArrowLeft, PlusCircle, CheckCircle } from 'lucide-react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type AddModelsPageProps = {
     params: { id: string };
@@ -20,104 +21,110 @@ type AddModelsPageProps = {
 export default function AddModelsPage({ params }: AddModelsPageProps) {
   const [allModels, setAllModels] = useState<Model[]>([]);
   const [list, setList] = useState<SavedList | null>(null);
+  const [allModels, setAllModels] = useState<Model[]>([]);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [savingModelId, setSavingModelId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   
+  const listId = params.id;
+
   useEffect(() => {
-    async function loadData() {
-        if (!params.id) return;
+    async function loadData(id: string) {
         setLoading(true);
         try {
             const [models, fetchedList] = await Promise.all([
                 getModels(),
-                getListById(params.id)
+            getListById(id)
             ]);
             setAllModels(models);
             setList(fetchedList);
-        } catch (error) {
-            console.error("Failed to load data:", error);
-            toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
-        } finally {
+        if (fetchedList) {
+            setSelectedModels(fetchedList.modelIds);
+        }
             setLoading(false);
         }
+    if(listId) {
+        loadData(listId);
     }
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [listId]);
   
-  const handleAddModel = async (modelId: string) => {
-    if (!list) return;
-    setSavingModelId(modelId);
-    try {
-        await addModelToList(list.id, modelId);
-        toast({
-            title: "Model Added!",
-            description: "The model has been added to your list.",
-        });
-        // Re-fetch list to update the modelIds
-        const updatedList = await getListById(list.id);
-        setList(updatedList);
-    } catch (error: any) {
-        toast({
-            title: "Error",
-            description: error.message || "Could not add model to list.",
-            variant: "destructive",
-        });
-    } finally {
-        setSavingModelId(null);
-    }
+  const handleToggleModel = (modelId: string) => {
+    setSelectedModels(prev =>
+      prev.includes(modelId)
+        ? prev.filter(id => id !== modelId)
+        : [...prev, modelId]
+    );
   };
 
+  const handleAddModels = async () => {
+    if (!list) return;
+    setIsSubmitting(true);
+    try {
+        await addModelsToList(list.id, selectedModels);
+        toast({ title: 'List Updated', description: 'Models have been successfully added to your list.' });
+        router.push(`/brand/saved-lists/${list.id}`);
+    } catch (error) {
+        toast({ title: 'Error', description: 'Failed to update list.', variant: 'destructive' });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin" /></div>;
+  }
+
+  if (!list) {
+    return <div className="container text-center py-12">List not found.</div>;
+    }
+
+  const availableModels = allModels.filter(m => !list.modelIds.includes(m.id));
+
   return (
-    <div className="container mx-auto px-4 md:px-6 py-8">
-        <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
+        <div className="flex justify-between items-center mb-8">
             <div>
                  <Button variant="ghost" size="sm" asChild className="mb-2">
-                    <Link href={`/brand/saved-lists/${params.id}`}>
+                    <Link href={`/brand/saved-lists/${list.id}`}>
                         <ArrowLeft className="mr-2"/>
                         Back to List
                     </Link>
                 </Button>
-                <h1 className="text-2xl font-headline font-bold">
-                    Add Models to "{list?.name || '...'}"
-                </h1>
+                <h1 className="text-3xl font-headline font-bold">Add Models to "{list.name}"</h1>
+                <p className="text-muted-foreground mt-1">Select models to add to your shortlist.</p>
             </div>
+            <Button onClick={handleAddModels} disabled={isSubmitting || selectedModels.length === (list.modelIds.length)}>
+                {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : <PlusCircle className="mr-2"/>}
+                Save Changes
+            </Button>
         </div>
       
-        {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[500px] w-full" />)}
-            </div>
-        ) : allModels.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {allModels.map((model) => {
-                  const isAlreadyInList = list?.modelIds.includes(model.id);
-                  const isSaving = savingModelId === model.id;
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {allModels.map(model => {
+                const isSelected = selectedModels.includes(model.id);
                   return (
-                    <div key={model.id} className="relative">
-                        <ModelCard model={model} />
-                        <div className="absolute top-2 right-2 z-10">
-                            <Button 
-                                size="sm" 
-                                onClick={() => handleAddModel(model.id)}
-                                disabled={isAlreadyInList || isSaving}
+                <Card 
+                    key={model.id} 
+                    onClick={() => handleToggleModel(model.id)}
+                    className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`}
                             >
-                                {isSaving ? <Loader2 className="animate-spin" /> : isAlreadyInList ? <CheckCircle /> : <PlusCircle />}
-                                <span className="ml-2">{isAlreadyInList ? 'Saved' : 'Save'}</span>
-                            </Button>
-                        </div>
-                    </div>
-                  )
-              })}
-            </div>
-        ) : (
-            <div className="flex flex-col items-center justify-center text-center h-96 bg-card rounded-lg">
-                <p className="text-xl font-semibold">No models found.</p>
-                <p className="text-muted-foreground mt-2">There are no models available on the platform to add.</p>
+                    <CardHeader className="p-0 relative">
+                        <Image src={model.profilePicture} alt={model.name} width={300} height={400} className="rounded-t-lg object-cover aspect-[3/4]" />
+                        {isSelected && (
+                            <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                                <CheckCircle className="h-5 w-5"/>
             </div>
         )}
+                    </CardHeader>
+                    <CardContent className="p-3">
+                        <p className="font-semibold truncate">{model.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{model.location}</p>
+                    </CardContent>
+                </Card>
+            )})}
+        </div>
     </div>
   );
 }

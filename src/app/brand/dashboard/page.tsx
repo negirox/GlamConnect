@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone, Clock } from "lucide-react";
+import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone, Clock, Star } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
@@ -15,15 +15,11 @@ import { AlertTriangle } from "lucide-react";
 import { getGigsByBrandId, Gig, getApplicantsByGigId } from "@/lib/gig-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { getListsByBrandId, createList, SavedList } from "@/lib/saved-list-actions";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from 'zod';
 import { useToast } from "@/hooks/use-toast";
-
+import { createSavedList, getListsByBrandId, SavedList } from "@/lib/saved-list-actions";
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
 
@@ -37,75 +33,73 @@ export default function BrandDashboardPage() {
     const [gigs, setGigs] = useState<GigWithApplicantCount[]>([]);
     const [savedLists, setSavedLists] = useState<SavedList[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isListDialogOpen, setIsListDialogOpen] = useState(false);
+    const [newListName, setNewListName] = useState("");
+    const [isCreatingList, setIsCreatingList] = useState(false);
     const router = useRouter();
     const { toast } = useToast();
     
-    const newListForm = useForm<z.infer<typeof newListSchema>>({
-        resolver: zodResolver(newListSchema),
-        defaultValues: { name: '' },
-    });
+    const fetchBrandData = async () => {
+        setLoading(true);
+        const session = await getSession();
+        if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
+            router.push('/login');
+            return;
+        }
 
-    useEffect(() => {
-        const fetchBrandData = async () => {
-            setLoading(true);
-            const session = await getSession();
-            if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
-                router.push('/login');
-                return;
-            }
-    
-            try {
-                const fetchedBrand = await getBrandByEmail(session.email);
-                setBrand(fetchedBrand);
-                if (fetchedBrand) {
-                    const [fetchedGigs, fetchedLists] = await Promise.all([
-                        getGigsByBrandId(fetchedBrand.id),
-                        getListsByBrandId(fetchedBrand.id)
-                    ]);
-    
-                    const gigsWithApplicantCounts = await Promise.all(
-                      fetchedGigs.map(async (gig) => {
+        try {
+            const fetchedBrand = await getBrandByEmail(session.email);
+            setBrand(fetchedBrand);
+            if (fetchedBrand) {
+                const [fetchedGigs, fetchedLists] = await Promise.all([
+                    getGigsByBrandId(fetchedBrand.id),
+                    getListsByBrandId(fetchedBrand.id),
+                ]);
+
+                const gigsWithCounts = await Promise.all(
+                    fetchedGigs.map(async (gig) => {
                         const applicants = await getApplicantsByGigId(gig.id);
                         return { ...gig, applicantCount: applicants.length };
-                      })
-                    );
-    
-                    setGigs(gigsWithApplicantCounts);
-                    setSavedLists(fetchedLists);
-                }
-            } catch (error) {
-                console.error("Failed to fetch brand data:", error);
-                setBrand(null);
-            } finally {
-                setLoading(false);
+                    })
+                );
+                setGigs(gigsWithCounts);
+                setSavedLists(fetchedLists);
             }
+        } catch (error) {
+            console.error("Failed to fetch brand data:", error);
+            setBrand(null);
+        } finally {
+            setLoading(false);
         }
+    }
+
+    useEffect(() => {
         fetchBrandData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-    
-    const onNewListSubmit = async (values: z.infer<typeof newListSchema>) => {
-        if (!brand) return;
-        try {
-            const newList = await createList(brand.id, values.name);
-            toast({ title: "Success", description: `List "${values.name}" created.` });
-            newListForm.reset();
-            setIsListDialogOpen(false);
-            const fetchedLists = await getListsByBrandId(brand.id); // Re-fetch lists
-            setSavedLists(fetchedLists);
-            router.push(`/brand/saved-lists/${newList.id}/add`);
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message || "Failed to create list.", variant: "destructive" });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [router]);
+
+    const handleCreateList = async () => {
+        if (!brand || !newListName.trim()) {
+            toast({ title: "Error", description: "List name cannot be empty.", variant: "destructive" });
+            return;
         }
-    };
+        setIsCreatingList(true);
+        try {
+            await createSavedList(brand.id, newListName);
+            toast({ title: "Success", description: "New list created." });
+            setNewListName("");
+            await fetchBrandData(); // Re-fetch data to update list
+        } catch(error) {
+            toast({ title: "Error", description: "Failed to create list.", variant: "destructive" });
+        } finally {
+            setIsCreatingList(false);
+        }
+    }
       
     const statusColor: Record<Gig['status'], string> = {
         Pending: 'bg-yellow-500',
         Verified: 'bg-green-500',
         Rejected: 'bg-red-500',
     }
-
 
     if (loading) {
       return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin"/></div>
@@ -224,55 +218,56 @@ export default function BrandDashboardPage() {
                  <Card>
                     <CardHeader>
                         <CardTitle className="font-headline flex items-center justify-between">
-                            <span>Saved Model Lists</span>
-                             <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
+                            <span className="flex items-center"><Star className="mr-2"/> Saved Model Lists</span>
+                            <Dialog>
                                 <DialogTrigger asChild>
                                     <Button variant="outline"><PlusCircle className="mr-2"/>New List</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
-                                        <DialogTitle>Create a New List</DialogTitle>
-                                        <DialogDescription>Give your new list of saved models a descriptive name. You can add models after creating the list.</DialogDescription>
+                                        <DialogTitle>Create New List</DialogTitle>
+                                        <DialogDescription>Give your new model shortlist a name.</DialogDescription>
                                     </DialogHeader>
-                                    <form onSubmit={newListForm.handleSubmit(onNewListSubmit)}>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                <Label htmlFor="name" className="text-right">Name</Label>
-                                                <Input id="name" {...newListForm.register('name')} className="col-span-3" />
-                                            </div>
-                                            {newListForm.formState.errors.name && <p className="col-span-4 text-center text-sm text-destructive">{newListForm.formState.errors.name.message}</p>}
+                                    <div className="grid gap-4 py-4">
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label htmlFor="name" className="text-right">Name</Label>
+                                            <Input id="name" value={newListName} onChange={(e) => setNewListName(e.target.value)} className="col-span-3" />
                                         </div>
-                                        <DialogFooter>
-                                            <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
-                                            <Button type="submit" disabled={newListForm.formState.isSubmitting}>
-                                                {newListForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                                Create & Add Models
-                                            </Button>
-                                        </DialogFooter>
-                                    </form>
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button type="button" variant="ghost">Cancel</Button>
+                                        </DialogClose>
+                                        <Button type="submit" onClick={handleCreateList} disabled={isCreatingList}>
+                                            {isCreatingList && <Loader2 className="animate-spin mr-2" />}
+                                            Create List
+                                        </Button>
+                                    </DialogFooter>
                                 </DialogContent>
                             </Dialog>
                         </CardTitle>
                         <CardDescription>Organize your favorite models into shortlists for future projects.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <div className="space-y-4">
-                            {savedLists.length > 0 ? savedLists.map((list, i) => (
-                                <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
-                                    <Link href={`/brand/saved-lists/${list.id}`} className="flex-1">
-                                        <p className="font-semibold">{list.name}</p>
-                                        <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
-                                    </Link>
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link href={`/brand/saved-lists/${list.id}`}>View</Link>
-                                    </Button>
-                                </div>
-                            )) : (
-                                <div className="text-center text-muted-foreground pt-8">
-                                    <p>You haven't created any saved lists yet.</p>
-                                </div>
-                            )}
-                        </div>
+                         <ScrollArea className="h-60">
+                             <div className="space-y-4 pr-4">
+                                {savedLists.length > 0 ? savedLists.map((list, i) => (
+                                    <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
+                                        <div>
+                                            <p className="font-semibold">{list.name}</p>
+                                            <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
+                                        </div>
+                                        <Button variant="outline" size="sm" asChild>
+                                          <Link href={`/brand/saved-lists/${list.id}`}>View</Link>
+                                        </Button>
+                                    </div>
+                                )) : (
+                                     <div className="text-center text-muted-foreground pt-12">
+                                        <p>You haven't created any lists yet.</p>
+                                    </div>
+                                )}
+                            </div>
+                         </ScrollArea>
                     </CardContent>
                 </Card>
             </div>

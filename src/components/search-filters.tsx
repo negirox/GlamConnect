@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,8 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Filter } from 'lucide-react';
 
 interface SearchFiltersProps {
   onFilterChange: (filters: any) => void;
@@ -21,6 +24,7 @@ interface SearchFiltersProps {
 
 export function SearchFilters({ onFilterChange }: SearchFiltersProps) {
   const [height, setHeight] = useState([175]);
+  const isMobile = useIsMobile();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,9 +34,9 @@ export function SearchFilters({ onFilterChange }: SearchFiltersProps) {
     onFilterChange(filters);
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <h2 className="text-xl font-headline font-semibold">Filters</h2>
+  const content = (
+    <>
+      {!isMobile && <h2 className="text-xl font-headline font-semibold">Filters</h2>}
       
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
@@ -42,7 +46,7 @@ export function SearchFilters({ onFilterChange }: SearchFiltersProps) {
       <Separator />
 
       <div className="space-y-4">
-        <Label>Height: {height[0]} cm</Label>
+        <Label>Height: {height[0]} cm & above</Label>
         <Slider
           defaultValue={height}
           onValueChange={setHeight}
@@ -61,6 +65,7 @@ export function SearchFilters({ onFilterChange }: SearchFiltersProps) {
             <SelectValue placeholder="Any Experience" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="Any">Any Experience</SelectItem>
             <SelectItem value="New Face">New Face</SelectItem>
             <SelectItem value="Experienced">Experienced</SelectItem>
             <SelectItem value="Expert">Expert</SelectItem>
@@ -75,26 +80,37 @@ export function SearchFilters({ onFilterChange }: SearchFiltersProps) {
         <RadioGroup name="availability" defaultValue="any">
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="any" id="r-any" />
-            <Label htmlFor="r-any">Any</Label>
+            <Label htmlFor="r-any" className="font-normal">Any</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="Full-time" id="r-full-time" />
-            <Label htmlFor="r-full-time">Full-time</Label>
+            <Label htmlFor="r-full-time" className="font-normal">Full-time</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="Part-time" id="r-part-time" />
-            <Label htmlFor="r-part-time">Part-time</Label>
+            <Label htmlFor="r-part-time" className="font-normal">Part-time</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="By Project" id="r-by-project" />
-            <Label htmlFor="r-by-project">By Project</Label>
+            <Label htmlFor="r-by-project" className="font-normal">By Project</Label>
           </div>
         </RadioGroup>
       </div>
       
       <Button type="submit" className="w-full bg-secondary hover:bg-accent">
+        <Filter className="mr-2" />
         Apply Filters
       </Button>
+    </>
+  );
+
+  if (isMobile) {
+    return <form onSubmit={handleSubmit} className="space-y-6 p-1">{content}</form>
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {content}
     </form>
   );
 }
