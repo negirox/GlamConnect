@@ -8,9 +8,9 @@ import { PieChart, Pie, Cell } from 'recharts';
 import { Users, Briefcase, UserCheck, Shield } from "lucide-react";
 
 const userDistributionData = [
-  { name: 'Models', value: 400, fill: 'var(--color-models)' },
-  { name: 'Brands', value: 150, fill: 'var(--color-brands)' },
-  { name: 'Admins', value: 5, fill: 'var(--color-admins)' },
+  { name: 'Models', value: 400, fill: 'hsl(var(--chart-1))' },
+  { name: 'Brands', value: 150, fill: 'hsl(var(--chart-2))' },
+  { name: 'Admins', value: 5, fill: 'hsl(var(--chart-3))' },
 ];
 
 const contentStatusData = [
@@ -24,6 +24,10 @@ const chartConfig = {
   models: { label: "Models", color: "hsl(var(--chart-1))" },
   brands: { label: "Brands", color: "hsl(var(--chart-2))" },
   admins: { label: "Admins", color: "hsl(var(--chart-3))" },
+  verifiedGigs: { label: "Verified Gigs", color: "hsl(var(--primary))" },
+  pendingGigs: { label: "Pending Gigs", color: "hsl(var(--secondary))" },
+  verifiedModels: { label: "Verified Models", color: "hsl(var(--accent))" },
+  pendingModels: { label: "Pending Models", color: "hsl(var(--destructive))" },
 }
 
 export default function AdminDashboardPage() {
@@ -39,17 +43,17 @@ export default function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">555</div>
-                        <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                        <p className="text-xs text-muted-foreground">400 Models, 150 Brands</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Gigs</CardTitle>
+                        <CardTitle className="text-sm font-medium">Open Gigs</CardTitle>
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">135</div>
-                         <p className="text-xs text-muted-foreground">+180.1% from last month</p>
+                        <div className="text-2xl font-bold">120</div>
+                         <p className="text-xs text-muted-foreground">+18 from last week</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -64,7 +68,7 @@ export default function AdminDashboardPage() {
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Reported Content</CardTitle>
+                        <CardTitle className="text-sm font-medium">Reports Pending</CardTitle>
                         <Shield className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -89,7 +93,7 @@ export default function AdminDashboardPage() {
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
                                 </Pie>
-                                <Legend />
+                                <Legend content={<p className="text-sm text-muted-foreground">User roles distribution</p>} />
                             </PieChart>
                         </ChartContainer>
                     </CardContent>
@@ -103,11 +107,11 @@ export default function AdminDashboardPage() {
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={contentStatusData}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
+                                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                                 <YAxis />
-                                <Tooltip />
+                                <Tooltip content={<ChartTooltipContent />} />
                                 <Legend />
-                                <Bar dataKey="count" fill="hsl(var(--primary))" />
+                                <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
