@@ -85,12 +85,13 @@ export default function BrandDashboardPage() {
     const onNewListSubmit = async (values: z.infer<typeof newListSchema>) => {
         if (!brand) return;
         try {
-            await createList(brand.id, values.name);
+            const newList = await createList(brand.id, values.name);
             toast({ title: "Success", description: `List "${values.name}" created.` });
             newListForm.reset();
             setIsListDialogOpen(false);
             const fetchedLists = await getListsByBrandId(brand.id); // Re-fetch lists
             setSavedLists(fetchedLists);
+            router.push(`/brand/saved-lists/${newList.id}/add`);
         } catch (error) {
             toast({ title: "Error", description: "Failed to create list.", variant: "destructive" });
         }
@@ -228,7 +229,7 @@ export default function BrandDashboardPage() {
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Create a New List</DialogTitle>
-                                        <DialogDescription>Give your new list of saved models a descriptive name.</DialogDescription>
+                                        <DialogDescription>Give your new list of saved models a descriptive name. You can add models after creating the list.</DialogDescription>
                                     </DialogHeader>
                                     <form onSubmit={newListForm.handleSubmit(onNewListSubmit)}>
                                         <div className="grid gap-4 py-4">
@@ -242,7 +243,7 @@ export default function BrandDashboardPage() {
                                             <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
                                             <Button type="submit" disabled={newListForm.formState.isSubmitting}>
                                                 {newListForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                                Create List
+                                                Create & Add Models
                                             </Button>
                                         </DialogFooter>
                                     </form>
@@ -254,13 +255,15 @@ export default function BrandDashboardPage() {
                     <CardContent>
                          <div className="space-y-4">
                             {savedLists.length > 0 ? savedLists.map((list, i) => (
-                                <Link href="/brand/dashboard" key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
+                                <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
                                     <div>
                                         <p className="font-semibold">{list.name}</p>
                                         <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
                                     </div>
-                                    <Button variant="outline" size="sm">View</Button>
-                                </Link>
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={`/brand/saved-lists/${list.id}`}>View</Link>
+                                    </Button>
+                                </div>
                             )) : (
                                 <div className="text-center text-muted-foreground pt-8">
                                     <p>You haven't created any saved lists yet.</p>

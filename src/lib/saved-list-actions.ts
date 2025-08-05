@@ -58,6 +58,11 @@ export async function getListsByBrandId(brandId: string): Promise<SavedList[]> {
     return allLists.filter(list => list.brandId === brandId);
 }
 
+export async function getListById(id: string): Promise<SavedList | null> {
+    const allLists = readSavedLists();
+    return allLists.find(list => list.id === id) || null;
+}
+
 export async function createList(brandId: string, listName: string, modelId?: string) {
     const lists = readSavedLists();
     const newId = (lists.length > 0 ? Math.max(...lists.map(l => parseInt(l.id, 10))) : 0) + 1;
@@ -91,6 +96,7 @@ export async function addModelToList(listId: string, modelId: string) {
         writeSavedLists(lists);
         revalidatePath('/brand/dashboard');
         revalidatePath(`/profile/${modelId}`);
+        revalidatePath(`/brand/saved-lists/${listId}`);
     } else {
         throw new Error('Model is already in this list.');
     }
