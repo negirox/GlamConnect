@@ -500,7 +500,7 @@ export default function ProfileManagementPage() {
       </div>
 
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-primary/80">
+        <TabsList className="flex flex-wrap h-auto bg-primary/80">
           <TabsTrigger value="basic"><User className="mr-2 h-4 w-4"/>Basic Info</TabsTrigger>
           <TabsTrigger value="attributes"><Ruler className="mr-2 h-4 w-4"/>Attributes</TabsTrigger>
           <TabsTrigger value="portfolio"><Camera className="mr-2 h-4 w-4"/>Portfolio</TabsTrigger>
@@ -531,7 +531,7 @@ export default function ProfileManagementPage() {
                         </Button>
                     </div>
                  </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>
                       <Input id="name" {...basicInfoForm.register('name')} />
@@ -607,7 +607,7 @@ export default function ProfileManagementPage() {
                         Accurate measurements are crucial for brands. All measurements in cm.
                     </CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-6">
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="height">Height (cm)</Label>
                             <Input id="height" type="number" {...attributesForm.register('height')} />
@@ -693,7 +693,7 @@ export default function ProfileManagementPage() {
                             <Label htmlFor="ethnicity">Ethnicity</Label>
                             <Input id="ethnicity" placeholder="e.g. Caucasian" {...attributesForm.register('ethnicity')} />
                         </div>
-                        <div className="col-span-2 grid grid-cols-2 gap-6">
+                        <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                            <div className="space-y-4 pt-2">
                                 <Label>Distinctive Features</Label>
                                 <div className="flex items-center space-x-2">
@@ -769,7 +769,7 @@ export default function ProfileManagementPage() {
                     </Label>
                 </div>
                 <p className="font-semibold mt-6 mb-4">Current Portfolio ({model.portfolioImages.length} images):</p>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {model.portfolioImages.map((img, i) => (
                          <div key={i} className="relative aspect-square">
                             <Image src={img} alt="portfolio image" data-ai-hint="fashion model" className="rounded-md object-cover w-full h-full" width={200} height={260}/>
@@ -792,7 +792,7 @@ export default function ProfileManagementPage() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label>Experience Level</Label>
                              <Controller
@@ -819,7 +819,7 @@ export default function ProfileManagementPage() {
                     </div>
                     <div className="space-y-3">
                         <Label>Types of Modeling Work Done</Label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                            {['Editorial', 'Commercial', 'Runway', 'Fitness', 'Swimwear', 'Semi-nude', 'Nude', 'Intimacy Photoshoot'].map(work => (
                                 <div key={work} className="flex items-center space-x-2">
                                      <Controller
@@ -850,7 +850,7 @@ export default function ProfileManagementPage() {
                         </Label>
                         <Textarea {...professionalForm.register('previousClients')} />
                     </div>
-                    <div className="grid grid-cols-2 gap-6 items-center">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                        <div className="flex items-center space-x-2">
                             <Controller name="agencyRepresented" control={professionalForm.control} render={({field}) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />
                             <Label>Represented by an Agency?</Label>
@@ -887,7 +887,7 @@ export default function ProfileManagementPage() {
                             name="availability"
                             control={professionalForm.control}
                             render={({ field }) => (
-                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex space-x-4">
+                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col md:flex-row md:space-x-4">
                                     <div className="flex items-center space-x-2">
                                         <RadioGroupItem value="Full-time" id="r-full-time" />
                                         <Label htmlFor="r-full-time">Full-time</Label>
@@ -904,7 +904,7 @@ export default function ProfileManagementPage() {
                             )}
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-6 items-center">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                         <div className="flex items-center space-x-2">
                            <Controller name="availableForBookings" control={professionalForm.control} render={({field}) => <Checkbox checked={field.value} onCheckedChange={field.onChange} />} />
                            <Label>Available for Bookings</Label>
@@ -919,7 +919,7 @@ export default function ProfileManagementPage() {
                                 <Input {...professionalForm.register('preferredRegions')} />
                             </div>
                         )}
-                         <div className="space-y-2 col-span-2">
+                         <div className="space-y-2 col-span-1 md:col-span-2">
                             <Label>Time Availability</Label>
                             <div className="flex gap-4">
                                <div className="flex items-center space-x-2">
@@ -955,7 +955,7 @@ export default function ProfileManagementPage() {
                     </div>
                     <div className="space-y-4 border p-4 rounded-md">
                         <h4 className="font-semibold">Rates (Optional/Private)</h4>
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label>Hourly Rate ($)</Label>
                                 <Input type="number" {...professionalForm.register('hourlyRate')} />
@@ -1047,7 +1047,7 @@ export default function ProfileManagementPage() {
                                     <Input id="dropzone-bikini" type="file" className="hidden" multiple onChange={e => handleFileSelect(e, 'bikiniPortfolioImages', true)}/>
                                 </Label>
                             </div>
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                                 {model.bikiniPortfolioImages?.map((img, i) => (
                                     <div key={i} className="relative aspect-square">
                                         <Image src={img} alt="bikini portfolio image" className="rounded-md object-cover w-full h-full" width={100} height={100}/>
@@ -1078,7 +1078,7 @@ export default function ProfileManagementPage() {
                                     <Input id="dropzone-semi-nude" type="file" className="hidden" multiple onChange={e => handleFileSelect(e, 'semiNudePortfolioImages', true)}/>
                                 </Label>
                             </div>
-                             <div className="grid grid-cols-4 gap-2">
+                             <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                                 {model.semiNudePortfolioImages?.map((img, i) => (
                                     <div key={i} className="relative aspect-square">
                                         <Image src={img} alt="semi-nude portfolio image" className="rounded-md object-cover w-full h-full" width={100} height={100}/>
@@ -1109,7 +1109,7 @@ export default function ProfileManagementPage() {
                                     <Input id="dropzone-nude" type="file" className="hidden" multiple onChange={e => handleFileSelect(e, 'nudePortfolioImages', true)}/>
                                  </Label>
                             </div>
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                                 {model.nudePortfolioImages?.map((img, i) => (
                                     <div key={i} className="relative aspect-square">
                                         <Image src={img} alt="nude portfolio image" className="rounded-md object-cover w-full h-full" width={100} height={100}/>
