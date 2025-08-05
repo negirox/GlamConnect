@@ -24,21 +24,24 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
   const [savingModelId, setSavingModelId] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const listId = params.id;
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (id: string) => {
     setLoading(true);
     const [models, fetchedList] = await Promise.all([
         getModels(),
-        getListById(params.id)
+        getListById(id)
     ]);
     setAllModels(models);
     setList(fetchedList);
     setLoading(false);
-  }, [params.id]);
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (listId) {
+      loadData(listId);
+    }
+  }, [listId, loadData]);
   
   const handleAddModel = async (modelId: string) => {
     if (!list) return;
@@ -68,7 +71,7 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
         <div className="flex justify-between items-center mb-6">
             <div>
                  <Button variant="ghost" size="sm" asChild className="mb-2">
-                    <Link href={`/brand/saved-lists/${params.id}`}>
+                    <Link href={`/brand/saved-lists/${listId}`}>
                         <ArrowLeft className="mr-2"/>
                         Back to List
                     </Link>
