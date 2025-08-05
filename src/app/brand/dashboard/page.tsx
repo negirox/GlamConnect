@@ -63,10 +63,14 @@ export default function BrandDashboardPage() {
                     getListsByBrandId(fetchedBrand.id)
                 ]);
 
-                // This part can be improved if applicant data is needed
-                const gigsWithCounts = fetchedGigs.map(gig => ({ ...gig, applicantCount: 0 /* Placeholder */ }));
+                const gigsWithApplicantCounts = await Promise.all(
+                  fetchedGigs.map(async (gig) => {
+                    const applicants = await getApplicantsByGigId(gig.id);
+                    return { ...gig, applicantCount: applicants.length };
+                  })
+                );
 
-                setGigs(gigsWithCounts);
+                setGigs(gigsWithApplicantCounts);
                 setSavedLists(fetchedLists);
             }
         } catch (error) {
@@ -255,15 +259,15 @@ export default function BrandDashboardPage() {
                     <CardContent>
                          <div className="space-y-4">
                             {savedLists.length > 0 ? savedLists.map((list, i) => (
-                                <Link href={`/brand/saved-lists/${list.id}`} key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
-                                    <div>
+                                <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
+                                    <Link href={`/brand/saved-lists/${list.id}`} className="flex-1">
                                         <p className="font-semibold">{list.name}</p>
                                         <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
-                                    </div>
+                                    </Link>
                                     <Button variant="outline" size="sm" asChild>
                                         <Link href={`/brand/saved-lists/${list.id}`}>View</Link>
                                     </Button>
-                                </Link>
+                                </div>
                             )) : (
                                 <div className="text-center text-muted-foreground pt-8">
                                     <p>You haven't created any saved lists yet.</p>
