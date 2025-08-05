@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import { getGigs, Gig } from "@/lib/gig-actions";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, CalendarDays, Briefcase, Building } from "lucide-react";
+import { MapPin, CalendarDays, Briefcase, Building, Users, DollarSign, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
 export default function GigsPage() {
     const [gigs, setGigs] = useState<Gig[]>([]);
@@ -17,11 +18,25 @@ export default function GigsPage() {
         async function fetchGigs() {
             setLoading(true);
             const fetchedGigs = await getGigs();
+            // Show all gigs on the public listing for now
             setGigs(fetchedGigs);
             setLoading(false);
         }
         fetchGigs();
     }, []);
+
+    const formatBudget = (gig: Gig) => {
+        if (gig.paymentType !== 'Paid') {
+            return gig.paymentType;
+        }
+        if (gig.budgetMin && gig.budgetMax) {
+            if (gig.budgetMin === gig.budgetMax) {
+                return `$${gig.budgetMin}`;
+            }
+            return `$${gig.budgetMin} - $${gig.budgetMax}`;
+        }
+        return 'Paid';
+    }
 
     return (
         <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
@@ -59,26 +74,40 @@ export default function GigsPage() {
                                             <Building className="h-4 w-4"/>Posted by {gig.brandName}
                                         </CardDescription>
                                     </div>
-                                    <Badge variant="secondary">New</Badge>
+                                    <Badge variant="secondary">{gig.projectType}</Badge>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-muted-foreground line-clamp-3">{gig.description}</p>
-                                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground mt-4">
+                                <div className="flex flex-wrap gap-x-6 gap-y-4 text-sm text-muted-foreground mt-4">
                                     <div className="flex items-center gap-2">
                                         <MapPin className="h-4 w-4" />
                                         <span>{gig.location}</span>
                                     </div>
                                      <div className="flex items-center gap-2">
                                         <CalendarDays className="h-4 w-4" />
-                                        <span>{new Date(gig.date).toLocaleDateString()}</span>
+                                        <span>Shoot Date: {new Date(gig.date).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Users className="h-4 w-4" />
+                                        <span>{gig.modelsNeeded} model(s)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 font-semibold">
+                                        <DollarSign className="h-4 w-4 text-green-600"/>
+                                        <span>{formatBudget(gig)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 font-semibold text-destructive">
+                                        <Clock className="h-4 w-4"/>
+                                        <span>Apply by: {new Date(gig.applicationDeadline).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button>
-                                    <Briefcase className="mr-2"/>
-                                    Apply Now
+                                <Button asChild>
+                                    <Link href={`/gigs/${gig.id}`}>
+                                        <Briefcase className="mr-2"/>
+                                        View & Apply
+                                    </Link>
                                 </Button>
                             </CardFooter>
                         </Card>

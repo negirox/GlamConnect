@@ -6,7 +6,18 @@ import path from 'path';
 import { revalidatePath } from 'next/cache';
 
 const gigsCsvFilePath = path.join(process.cwd(), 'public', 'gigs.csv');
-const GIG_HEADERS = ['id', 'title', 'description', 'location', 'date', 'brandId', 'brandName'];
+const applicationsCsvFilePath = path.join(process.cwd(), 'public', 'applications.csv');
+
+const GIG_HEADERS = [
+    'id', 'title', 'description', 'location', 'date', 'brandId', 'brandName',
+    'projectType', 'genderPreference', 'modelsNeeded', 'isGroupShoot', 'timing',
+    'travelProvided', 'accommodationProvided', 'paymentType', 'budgetMin', 
+    'budgetMax', 'paymentMode', 'paymentTimeline', 'ageRangeMin', 'ageRangeMax',
+    'heightRangeMin', 'heightRangeMax', 'experienceLevel', 'bodyTypePreferences',
+    'consentRequired', 'languageRequirement', 'portfolioLinkRequired',
+    'moodBoardUrl', 'referenceImages', 'videoBriefLink', 'visibility',
+    'applicationDeadline', 'allowDirectMessaging', 'showBrandName', 'status'
+];
 
 export type Gig = {
     id: string;
@@ -16,6 +27,41 @@ export type Gig = {
     date: string;
     brandId: string;
     brandName: string;
+    projectType: string;
+    genderPreference: 'Male' | 'Female' | 'Trans' | 'Any';
+    modelsNeeded: number;
+    isGroupShoot?: boolean;
+    timing: string;
+    travelProvided?: boolean;
+    accommodationProvided?: boolean;
+    paymentType: 'Paid' | 'TFP' | 'Exposure';
+    budgetMin?: number;
+    budgetMax?: number;
+    paymentMode?: 'Bank' | 'Cash' | 'UPI' | 'Other';
+    paymentTimeline?: string;
+    ageRangeMin?: number;
+    ageRangeMax?: number;
+    heightRangeMin?: number;
+    heightRangeMax?: number;
+    experienceLevel?: 'Newcomer' | '1-3 years' | '3+ years';
+    bodyTypePreferences?: string[];
+    consentRequired?: ('Bikini' | 'Semi-Nude' | 'Nude')[];
+    languageRequirement?: string[];
+    portfolioLinkRequired?: boolean;
+    moodBoardUrl?: string;
+    referenceImages?: string[];
+    videoBriefLink?: string;
+    visibility?: 'Public' | 'Private' | 'Premium only';
+    applicationDeadline: string;
+    allowDirectMessaging?: boolean;
+    showBrandName?: boolean;
+    status: 'Pending' | 'Verified' | 'Rejected';
+}
+
+export type Application = {
+    gigId: string;
+    modelId: string;
+    date: string;
 }
 
 function readGigs(): Gig[] {
@@ -33,7 +79,16 @@ function readGigs(): Gig[] {
     return lines.slice(1).map(line => {
         const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         const entry = headers.reduce((obj, header, index) => {
-            (obj as any)[header] = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
+            const rawValue = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
+            if (['modelsNeeded', 'budgetMin', 'budgetMax', 'ageRangeMin', 'ageRangeMax', 'heightRangeMin', 'heightRangeMax'].includes(header)) {
+                (obj as any)[header] = rawValue ? parseInt(rawValue, 10) : undefined;
+            } else if (['isGroupShoot', 'travelProvided', 'accommodationProvided', 'portfolioLinkRequired', 'allowDirectMessaging', 'showBrandName'].includes(header)) {
+                (obj as any)[header] = rawValue.toLowerCase() === 'true';
+            } else if (['bodyTypePreferences', 'consentRequired', 'languageRequirement', 'referenceImages'].includes(header)) {
+                (obj as any)[header] = rawValue ? rawValue.split(';').map(s => s.trim()) : [];
+            } else {
+                 (obj as any)[header] = rawValue;
+            }
             return obj;
         }, {} as Gig);
         return entry;
@@ -47,6 +102,13 @@ function writeGigs(gigs: Gig[]) {
             const key = header as keyof Gig;
             let value = gig[key];
             
+            if (Array.isArray(value)) {
+                return `"${value.join(';')}"`;
+            }
+            if (value === null || value === undefined) {
+                return '';
+            }
+
             let stringValue = String(value);
              if (stringValue.includes(',')) {
                 return `"${stringValue.replace(/"/g, '""')}"`;
@@ -59,13 +121,14 @@ function writeGigs(gigs: Gig[]) {
 }
 
 
-export async function createGig(gigData: Omit<Gig, 'id'>) {
+export async function createGig(gigData: Omit<Gig, 'id' | 'status'>) {
     const gigs = readGigs();
     const newId = (gigs.length > 0 ? Math.max(...gigs.map(g => parseInt(g.id, 10))) : 0) + 1;
     
     const newGig: Gig = {
         ...gigData,
         id: newId.toString(),
+        status: 'Pending',
     };
 
     gigs.push(newGig);
@@ -83,4 +146,66 @@ export async function getGigs(): Promise<Gig[]> {
         console.error('Error reading or parsing gigs.csv:', error);
         return [];
     }
+}
+
+export async function getGigsByBrandId(brandId: string): Promise<Gig[]> {
+    const allGigs = await getGigs();
+    return allGigs.filter(gig => gig.brandId === brandId);
+}
+
+export async function getGigById(id: string): Promise<Gig | null> {
+    const allGigs = await getGigs();
+    return allGigs.find(gig => gig.id === id) || null;
+}
+
+// Application Functions
+
+function readApplications(): Application[] {
+    const headers = ['gigId', 'modelId', 'date'];
+    if(!fs.existsSync(applicationsCsvFilePath)) {
+        fs.writeFileSync(applicationsCsvFilePath, headers.join(',') + '\n', 'utf-8');
+        return [];
+    }
+    const csvData = fs.readFileSync(applicationsCsvFilePath, 'utf-8');
+    const lines = csvData.trim().split('\n');
+    if (lines.length <= 1) return [];
+
+    return lines.slice(1).map(line => {
+        const [gigId, modelId, date] = line.split(',');
+        return { gigId, modelId, date };
+    });
+}
+
+function writeApplications(applications: Application[]) {
+    const headers = ['gigId', 'modelId', 'date'];
+    const headerString = headers.join(',');
+    const rows = applications.map(app => [app.gigId, app.modelId, app.date].join(','));
+    const csvString = [headerString, ...rows].join('\n') + '\n';
+    fs.writeFileSync(applicationsCsvFilePath, csvString, 'utf-8');
+}
+
+export async function applyForGig(gigId: string, modelId: string) {
+    const applications = readApplications();
+    const existingApplication = applications.find(app => app.gigId === gigId && app.modelId === modelId);
+
+    if (existingApplication) {
+        throw new Error('You have already applied for this gig.');
+    }
+
+    const newApplication: Application = {
+        gigId,
+        modelId,
+        date: new Date().toISOString(),
+    };
+
+    applications.push(newApplication);
+    writeApplications(applications);
+
+    revalidatePath(`/gigs/${gigId}`);
+    revalidatePath('/brand/dashboard');
+}
+
+export async function getApplicantsByGigId(gigId: string): Promise<Application[]> {
+    const applications = readApplications();
+    return applications.filter(app => app.gigId === gigId);
 }

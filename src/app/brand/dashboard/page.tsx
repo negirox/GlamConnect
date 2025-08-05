@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone } from "lucide-react";
+import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone, Clock } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
@@ -12,27 +12,26 @@ import { getBrandByEmail, Brand } from "@/lib/brand-actions";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-
-// This is a placeholder for now. In a real app you'd fetch this.
-const postedGigs = [
-    { title: "Summer Swimwear Campaign", applicants: 12, status: "Active" },
-    { title: "Editorial Shoot for 'Elegance'", applicants: 25, status: "Active" },
-    { title: "Music Video Lead", applicants: 4, status: "Closed" },
-];
+import { getGigsByBrandId, Gig, getApplicantsByGigId } from "@/lib/gig-actions";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 const savedLists = [
     { name: "Swimwear Campaign Favorites", count: 5 },
     { name: "Potential Runway Models", count: 18 },
 ]
 
+type GigWithApplicantCount = Gig & { applicantCount: number };
+
 
 export default function BrandDashboardPage() {
     const [brand, setBrand] = useState<Brand | null>(null);
+    const [gigs, setGigs] = useState<GigWithApplicantCount[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     
     useEffect(() => {
-        const fetchBrand = async () => {
+        const fetchBrandData = async () => {
             setLoading(true);
             const session = await getSession();
             if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
@@ -43,6 +42,16 @@ export default function BrandDashboardPage() {
             try {
                 const fetchedBrand = await getBrandByEmail(session.email);
                 setBrand(fetchedBrand);
+                if (fetchedBrand) {
+                    const fetchedGigs = await getGigsByBrandId(fetchedBrand.id);
+                    const gigsWithCounts = await Promise.all(
+                        fetchedGigs.map(async (gig) => {
+                            const applicants = await getApplicantsByGigId(gig.id);
+                            return { ...gig, applicantCount: applicants.length };
+                        })
+                    );
+                    setGigs(gigsWithCounts);
+                }
             } catch (error) {
                 console.error("Failed to fetch brand data:", error);
                 setBrand(null);
@@ -50,8 +59,15 @@ export default function BrandDashboardPage() {
                 setLoading(false);
             }
         }
-        fetchBrand();
+        fetchBrandData();
       }, [router])
+      
+    const statusColor: Record<Gig['status'], string> = {
+        Pending: 'bg-yellow-500',
+        Verified: 'bg-green-500',
+        Rejected: 'bg-red-500',
+    }
+
 
     if (loading) {
       return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin"/></div>
@@ -136,20 +152,34 @@ export default function BrandDashboardPage() {
                         <CardDescription>View and manage your current and past job postings.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {postedGigs.map((gig, i) => (
-                                <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
-                                    <div>
-                                        <p className="font-semibold">{gig.title}</p>
-                                        <p className="text-sm text-muted-foreground">{gig.applicants} Applicants</p>
+                        <ScrollArea className="h-60">
+                            <div className="space-y-4 pr-4">
+                                {gigs.length > 0 ? gigs.map((gig, i) => (
+                                    <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <span title={`Status: ${gig.status}`} className={`block h-3 w-3 rounded-full ${statusColor[gig.status]}`}></span>
+                                            <div>
+                                                <p className="font-semibold truncate">{gig.title}</p>
+                                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                                    <Clock className="h-3 w-3"/>
+                                                    Ends: {new Date(gig.applicationDeadline).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="secondary">{gig.applicantCount} Applicants</Badge>
+                                            <Button variant="outline" size="sm" asChild>
+                                                <Link href={`/gigs/${gig.id}`}>View</Link>
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className={`text-sm font-medium ${gig.status === 'Active' ? 'text-green-600' : 'text-muted-foreground'}`}>{gig.status}</span>
-                                        <Button variant="outline" size="sm">View</Button>
+                                )) : (
+                                    <div className="text-center text-muted-foreground pt-12">
+                                        <p>You haven't posted any gigs yet.</p>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                )}
+                            </div>
+                        </ScrollArea>
                     </CardContent>
                 </Card>
 

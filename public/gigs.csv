@@ -1,2 +1,3 @@
-id,title,description,location,date,brandId,brandName
-1,ghghg,hgghghfvhdfjvhjdfvhjdfbfhjdbdfhjbfhjbfhjbhjfbfhjbdfhjbfhj,Mumbai,2025-10-30,3,Mukesh Negi
+id,title,description,location,date,brandId,brandName,projectType,genderPreference,modelsNeeded,isGroupShoot,timing,travelProvided,accommodationProvided,paymentType,budgetMin,budgetMax,paymentMode,paymentTimeline,ageRangeMin,ageRangeMax,heightRangeMin,heightRangeMax,experienceLevel,bodyTypePreferences,consentRequired,languageRequirement,portfolioLinkRequired,moodBoardUrl,referenceImages,videoBriefLink,visibility,applicationDeadline,allowDirectMessaging,showBrandName
+1,ghghg,hgghghfvhdfjvhjdfvhjdfbfhjdbdfhjbfhjbfhjbhjfbfhjbdfhjbfhj,Mumbai,2025-10-30,3,Mukesh Negi,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+2,Summar Fashion Camp,This shoot is for Jockey brand for summer camp. where modells will do bikni and nude shoot. ,Mumbai,2025-10-31,4,Alice Johnson,Swimwear,Female,5,false,6PM-10PM,false,false,Paid,30,50,Cash,Within 1-3 Day,19,25,155,170,Newcomer,,"Nude;Bikini",,false,,,,,2025-08-20,,
