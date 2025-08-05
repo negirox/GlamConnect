@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getListById, SavedList, addModelToList } from '@/lib/saved-list-actions';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { PlusCircle, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -37,7 +37,8 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
       setLoading(false);
     }
     loadData();
-  }, [params.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const handleAddModel = async (modelId: string) => {
     if (!list) return;
