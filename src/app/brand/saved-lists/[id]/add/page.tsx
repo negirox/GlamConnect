@@ -26,22 +26,26 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
   const { toast } = useToast();
   const listId = params.id;
 
-  const loadData = useCallback(async (id: string) => {
-    setLoading(true);
-    const [models, fetchedList] = await Promise.all([
-        getModels(),
-        getListById(id)
-    ]);
-    setAllModels(models);
-    setList(fetchedList);
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
-    if (listId) {
-      loadData(listId);
+    async function loadData() {
+        if (!listId) return;
+        setLoading(true);
+        try {
+            const [models, fetchedList] = await Promise.all([
+                getModels(),
+                getListById(listId)
+            ]);
+            setAllModels(models);
+            setList(fetchedList);
+        } catch (error) {
+            console.error("Failed to load data:", error);
+            toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
     }
-  }, [listId, loadData]);
+    loadData();
+  }, [listId, toast]);
   
   const handleAddModel = async (modelId: string) => {
     if (!list) return;
@@ -117,3 +121,4 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
     </div>
   );
 }
+
