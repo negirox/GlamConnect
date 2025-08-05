@@ -65,6 +65,12 @@ export async function getListById(id: string): Promise<SavedList | null> {
 
 export async function createList(brandId: string, listName: string, modelId?: string) {
     const lists = readSavedLists();
+    
+    const brandLists = lists.filter(l => l.brandId === brandId);
+    if (brandLists.some(l => l.name.toLowerCase() === listName.toLowerCase())) {
+        throw new Error(`A list with the name "${listName}" already exists.`);
+    }
+
     const newId = (lists.length > 0 ? Math.max(...lists.map(l => parseInt(l.id, 10))) : 0) + 1;
 
     const newList: SavedList = {
@@ -100,4 +106,37 @@ export async function addModelToList(listId: string, modelId: string) {
     } else {
         throw new Error('Model is already in this list.');
     }
+}
+
+export async function removeModelFromList(listId: string, modelId: string) {
+    const lists = readSavedLists();
+    const listIndex = lists.findIndex(l => l.id === listId);
+
+    if (listIndex === -1) {
+        throw new Error('List not found');
+    }
+
+    const modelIndexInList = lists[listIndex].modelIds.indexOf(modelId);
+    if (modelIndexInList > -1) {
+        lists[listIndex].modelIds.splice(modelIndexInList, 1);
+        writeSavedLists(lists);
+        revalidatePath(`/brand/saved-lists/${listId}`);
+        revalidatePath('/brand/dashboard');
+    } else {
+        throw new Error('Model not found in this list.');
+    }
+}
+
+export async function deleteList(listId: string) {
+    let lists = readSavedLists();
+    const initialLength = lists.length;
+    lists = lists.filter(l => l.id !== listId);
+
+    if (lists.length === initialLength) {
+        throw new Error('List not found to delete.');
+    }
+
+    writeSavedLists(lists);
+    revalidatePath('/brand/dashboard');
+    revalidatePath(`/brand/saved-lists/${listId}`);
 }

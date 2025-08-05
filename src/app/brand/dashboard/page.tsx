@@ -92,8 +92,8 @@ export default function BrandDashboardPage() {
             const fetchedLists = await getListsByBrandId(brand.id); // Re-fetch lists
             setSavedLists(fetchedLists);
             router.push(`/brand/saved-lists/${newList.id}/add`);
-        } catch (error) {
-            toast({ title: "Error", description: "Failed to create list.", variant: "destructive" });
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to create list.", variant: "destructive" });
         }
     };
       
@@ -255,15 +255,15 @@ export default function BrandDashboardPage() {
                     <CardContent>
                          <div className="space-y-4">
                             {savedLists.length > 0 ? savedLists.map((list, i) => (
-                                <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
+                                <Link href={`/brand/saved-lists/${list.id}`} key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
                                     <div>
                                         <p className="font-semibold">{list.name}</p>
                                         <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
                                     </div>
                                     <Button variant="outline" size="sm" asChild>
-                                        <Link href={`/brand/saved-lists/${list.id}`}>View</Link>
+                                        <div onClick={(e) => e.preventDefault()}><Link href={`/brand/saved-lists/${list.id}`}>View</Link></div>
                                     </Button>
-                                </div>
+                                </Link>
                             )) : (
                                 <div className="text-center text-muted-foreground pt-8">
                                     <p>You haven't created any saved lists yet.</p>
