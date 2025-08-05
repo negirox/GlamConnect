@@ -27,12 +27,12 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
   const { toast } = useToast();
   
   useEffect(() => {
-    async function loadData(id: string) {
+    async function loadData() {
         setLoading(true);
         try {
             const [models, fetchedList] = await Promise.all([
                 getModels(),
-                getListById(id)
+                getListById(params.id)
             ]);
             setAllModels(models);
             setList(fetchedList);
@@ -48,7 +48,7 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
     }
     
     if (params.id) {
-        loadData(params.id);
+        loadData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
@@ -91,7 +91,7 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
         <div className="flex justify-between items-center mb-8">
             <div>
                  <Button variant="ghost" size="sm" asChild className="mb-2">
-                    <Link href={`/brand/saved-lists/${list.id}`}>
+                    <Link href={`/brand/saved-lists/${params.id}`}>
                         <ArrowLeft className="mr-2"/>
                         Back to List
                     </Link>
