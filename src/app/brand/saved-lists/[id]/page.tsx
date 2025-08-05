@@ -25,10 +25,10 @@ export default function SavedListPage({ params }: ListPageProps) {
     const { toast } = useToast();
     const router = useRouter();
 
-    async function fetchListData() {
+    async function fetchListData(listId: string) {
         setLoading(true);
         try {
-            const fetchedList = await getListById(params.id);
+            const fetchedList = await getListById(listId);
             if (fetchedList) {
                 setList(fetchedList);
                 const modelPromises = fetchedList.modelIds.map(id => getModelById(id));
@@ -47,7 +47,7 @@ export default function SavedListPage({ params }: ListPageProps) {
     }
 
     useEffect(() => {
-        fetchListData();
+        fetchListData(params.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [params.id]);
 
@@ -57,7 +57,7 @@ export default function SavedListPage({ params }: ListPageProps) {
         try {
             await removeModelFromList(list.id, modelId);
             toast({ title: "Model Removed", description: "The model has been removed from this list." });
-            await fetchListData(); // Re-fetch to update the UI
+            await fetchListData(params.id); // Re-fetch to update the UI
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to remove model.", variant: "destructive" });
         } finally {
