@@ -6,8 +6,7 @@ import { redirect } from 'next/navigation';
 import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
-
-const usersCsvFilePath = path.join(process.cwd(), 'public', 'users.csv');
+import { readUsers, readAdmins } from './user-actions';
 
 type User = {
     id: string;
@@ -17,32 +16,6 @@ type User = {
     role: 'model' | 'brand' | 'admin';
 }
 
-function readUsers(): User[] {
-  if (!fs.existsSync(usersCsvFilePath)) {
-    return [];
-  }
-  const csvData = fs.readFileSync(usersCsvFilePath, 'utf-8');
-  const lines = csvData.trim().split('\n');
-  if (lines.length <= 1) return [];
-
-  const headers = lines[0].split(',').map(h => h.trim());
-  const emailIndex = headers.indexOf('email');
-  const passwordIndex = headers.indexOf('password');
-  const idIndex = headers.indexOf('id');
-  const nameIndex = headers.indexOf('name');
-  const roleIndex = headers.indexOf('role');
-
-  return lines.slice(1).map(line => {
-    const values = line.split(',');
-    return {
-      id: values[idIndex],
-      name: values[nameIndex],
-      email: values[emailIndex],
-      password: values[passwordIndex],
-      role: values[roleIndex] as 'model' | 'brand' | 'admin',
-    };
-  });
-}
 
 export async function getSession() {
   const session = cookies().get('session')?.value;
@@ -64,8 +37,11 @@ export async function authenticate(
         const email = formData.get('email') as string;
         const password = formData.get('password') as string;
 
-        const users = readUsers();
-        const user = users.find(u => u.email === email);
+        const { users: regularUsers } = await readUsers();
+        const { users: adminUsers } = await readAdmins();
+
+        const allUsers = [...regularUsers, ...adminUsers];
+        const user = allUsers.find(u => u.email === email);
 
         if (!user || user.password !== password) {
             return 'Invalid email or password';
@@ -94,8 +70,10 @@ export async function authenticate(
     }
 
     const emailForRedirect = formData.get('email') as string;
-    const usersForRedirect = readUsers();
-    const userForRedirect = usersForRedirect.find(u => u.email === emailForRedirect);
+    const { users: regularUsersRedirect } = await readUsers();
+    const { users: adminUsersRedirect } = await readAdmins();
+    const allUsersForRedirect = [...regularUsersRedirect, ...adminUsersRedirect];
+    const userForRedirect = allUsersForRedirect.find(u => u.email === emailForRedirect);
 
     if (userForRedirect?.role === 'brand') {
         redirect('/brand/dashboard');
