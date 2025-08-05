@@ -25,28 +25,28 @@ export default function SavedListPage({ params }: ListPageProps) {
     const { toast } = useToast();
     const router = useRouter();
 
-    async function fetchListData() {
-        setLoading(true);
-        try {
-            const fetchedList = await getListById(params.id);
-            if (fetchedList) {
-                setList(fetchedList);
-                const modelPromises = fetchedList.modelIds.map(id => getModelById(id));
-                const fetchedModels = (await Promise.all(modelPromises)).filter(m => m !== undefined) as Model[];
-                setModels(fetchedModels);
-            } else {
-                setList(null);
-                setModels([]);
-            }
-        } catch (error) {
-            console.error("Failed to fetch list data:", error);
-            toast({ title: "Error", description: "Could not fetch list data.", variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
-    }
-
     useEffect(() => {
+        async function fetchListData() {
+            if (!params.id) return;
+            setLoading(true);
+            try {
+                const fetchedList = await getListById(params.id);
+                if (fetchedList) {
+                    setList(fetchedList);
+                    const modelPromises = fetchedList.modelIds.map(id => getModelById(id));
+                    const fetchedModels = (await Promise.all(modelPromises)).filter(m => m !== undefined) as Model[];
+                    setModels(fetchedModels);
+                } else {
+                    setList(null);
+                    setModels([]);
+                }
+            } catch (error) {
+                console.error("Failed to fetch list data:", error);
+                toast({ title: "Error", description: "Could not fetch list data.", variant: "destructive" });
+            } finally {
+                setLoading(false);
+            }
+        }
         fetchListData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [params.id]);
@@ -57,7 +57,13 @@ export default function SavedListPage({ params }: ListPageProps) {
         try {
             await removeModelFromList(list.id, modelId);
             toast({ title: "Model Removed", description: "The model has been removed from this list." });
-            await fetchListData(); // Re-fetch to update the UI
+            const updatedList = await getListById(list.id);
+            if (updatedList) {
+                setList(updatedList);
+                const modelPromises = updatedList.modelIds.map(id => getModelById(id));
+                const fetchedModels = (await Promise.all(modelPromises)).filter(m => m !== undefined) as Model[];
+                setModels(fetchedModels);
+            }
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to remove model.", variant: "destructive" });
         } finally {

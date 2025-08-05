@@ -59,6 +59,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   useEffect(() => {
     const fetchPageData = async () => {
+      if (!params.id) return;
       setLoading(true);
       const sessionData = await getSession();
       setSession(sessionData);
@@ -92,8 +93,10 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               toast({ title: "Success", description: `${model.name} saved to "${list?.name}".` });
           }
           // Optionally, re-fetch lists to show the new one if created
-          const updatedLists = await getListsByBrandId(session.id);
-          setSavedLists(updatedLists);
+          if (session.id) {
+            const updatedLists = await getListsByBrandId(session.id);
+            setSavedLists(updatedLists);
+          }
           setSelectedList(null);
           setNewListName('');
 

@@ -31,6 +31,7 @@ export default function GigPage({ params }: GigPageProps) {
 
     useEffect(() => {
         async function fetchData() {
+            if (!params.id) return;
             setLoading(true);
             const [fetchedGig, sessionData] = await Promise.all([
                 getGigById(params.id),

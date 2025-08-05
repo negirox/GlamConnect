@@ -46,45 +46,44 @@ export default function BrandDashboardPage() {
         defaultValues: { name: '' },
     });
 
-    const fetchBrandData = async () => {
-        setLoading(true);
-        const session = await getSession();
-        if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
-            router.push('/login');
-            return;
-        }
-
-        try {
-            const fetchedBrand = await getBrandByEmail(session.email);
-            setBrand(fetchedBrand);
-            if (fetchedBrand) {
-                const [fetchedGigs, fetchedLists] = await Promise.all([
-                    getGigsByBrandId(fetchedBrand.id),
-                    getListsByBrandId(fetchedBrand.id)
-                ]);
-
-                const gigsWithApplicantCounts = await Promise.all(
-                  fetchedGigs.map(async (gig) => {
-                    const applicants = await getApplicantsByGigId(gig.id);
-                    return { ...gig, applicantCount: applicants.length };
-                  })
-                );
-
-                setGigs(gigsWithApplicantCounts);
-                setSavedLists(fetchedLists);
-            }
-        } catch (error) {
-            console.error("Failed to fetch brand data:", error);
-            setBrand(null);
-        } finally {
-            setLoading(false);
-        }
-    }
-
     useEffect(() => {
+        const fetchBrandData = async () => {
+            setLoading(true);
+            const session = await getSession();
+            if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
+                router.push('/login');
+                return;
+            }
+    
+            try {
+                const fetchedBrand = await getBrandByEmail(session.email);
+                setBrand(fetchedBrand);
+                if (fetchedBrand) {
+                    const [fetchedGigs, fetchedLists] = await Promise.all([
+                        getGigsByBrandId(fetchedBrand.id),
+                        getListsByBrandId(fetchedBrand.id)
+                    ]);
+    
+                    const gigsWithApplicantCounts = await Promise.all(
+                      fetchedGigs.map(async (gig) => {
+                        const applicants = await getApplicantsByGigId(gig.id);
+                        return { ...gig, applicantCount: applicants.length };
+                      })
+                    );
+    
+                    setGigs(gigsWithApplicantCounts);
+                    setSavedLists(fetchedLists);
+                }
+            } catch (error) {
+                console.error("Failed to fetch brand data:", error);
+                setBrand(null);
+            } finally {
+                setLoading(false);
+            }
+        }
         fetchBrandData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [router])
+    }, [])
     
     const onNewListSubmit = async (values: z.infer<typeof newListSchema>) => {
         if (!brand) return;

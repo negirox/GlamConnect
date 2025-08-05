@@ -44,7 +44,8 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
         }
     }
     loadData();
-  }, [params.id, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
   
   const handleAddModel = async (modelId: string) => {
     if (!list) return;
