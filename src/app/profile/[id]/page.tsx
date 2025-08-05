@@ -28,11 +28,19 @@ import {
   Flag,
   Info,
   Sigma,
+  Save,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Model } from '@/lib/mock-data';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { getSession } from '@/lib/auth-actions';
+import { getListsByBrandId, addModelToList, createList, SavedList } from '@/lib/saved-list-actions';
+import { useToast } from '@/hooks/use-toast';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+
 
 type ProfilePageProps = {
   params: { id: string };
@@ -41,16 +49,60 @@ type ProfilePageProps = {
 export default function ProfilePage({ params }: ProfilePageProps) {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
+  const [savedLists, setSavedLists] = useState<SavedList[]>([]);
+  const [selectedList, setSelectedList] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const { toast } = useToast();
+
 
   useEffect(() => {
-    const fetchModel = async () => {
+    const fetchPageData = async () => {
       setLoading(true);
-      const fetchedModel = await getModelById(params.id);
+      const sessionData = await getSession();
+      setSession(sessionData);
+
+      const [fetchedModel, fetchedLists] = await Promise.all([
+         getModelById(params.id),
+         sessionData.isLoggedIn && sessionData.role === 'brand' ? getListsByBrandId(sessionData.id) : Promise.resolve([])
+      ]);
+      
       setModel(fetchedModel || null);
+      setSavedLists(fetchedLists);
       setLoading(false);
     };
-    fetchModel();
+    fetchPageData();
   }, [params.id]);
+
+  const handleSaveToList = async () => {
+      if (!selectedList || !model) return;
+      setIsSubmitting(true);
+      try {
+          if (selectedList === 'new') {
+              if (!newListName) {
+                  toast({ title: "Error", description: "Please enter a name for the new list.", variant: "destructive" });
+                  return;
+              }
+              await createList(session.id, newListName, model.id);
+              toast({ title: "Success", description: `${model.name} saved to new list "${newListName}".` });
+          } else {
+              await addModelToList(selectedList, model.id);
+              const list = savedLists.find(l => l.id === selectedList);
+              toast({ title: "Success", description: `${model.name} saved to "${list?.name}".` });
+          }
+          // Optionally, re-fetch lists to show the new one if created
+          const updatedLists = await getListsByBrandId(session.id);
+          setSavedLists(updatedLists);
+          setSelectedList(null);
+          setNewListName('');
+
+      } catch (error: any) {
+          toast({ title: "Error", description: error.message || "Failed to save model.", variant: "destructive" });
+      } finally {
+          setIsSubmitting(false);
+      }
+  }
 
 
   if (loading) {
@@ -119,10 +171,53 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                     </Button>
                   )}
               </div>
-              <Button size="lg" className="w-full mt-6 bg-secondary hover:bg-accent">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Contact {model.name.split(' ')[0]}
-              </Button>
+              <div className="flex flex-col gap-2 mt-6">
+                <Button size="lg" className="w-full bg-secondary hover:bg-accent">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Contact {model.name.split(' ')[0]}
+                </Button>
+                {session?.role === 'brand' && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                        <Button size="lg" variant="outline" className="w-full"><Save className="mr-2" /> Save to List</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Save {model.name} to a list</DialogTitle>
+                            <DialogDescription>Select an existing list or create a new one.</DialogDescription>
+                        </DialogHeader>
+                        <RadioGroup value={selectedList || ''} onValueChange={setSelectedList} className="my-4 max-h-48 overflow-y-auto">
+                            {savedLists.map(list => (
+                                <div key={list.id} className="flex items-center space-x-2">
+                                    <RadioGroupItem value={list.id} id={`list-${list.id}`} />
+                                    <Label htmlFor={`list-${list.id}`}>{list.name} ({list.modelIds.length} models)</Label>
+                                </div>
+                            ))}
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="new" id="list-new" />
+                                <Label htmlFor="list-new">Create a new list</Label>
+                            </div>
+                        </RadioGroup>
+                        {selectedList === 'new' && (
+                            <Input 
+                                placeholder="Enter new list name..." 
+                                value={newListName} 
+                                onChange={(e) => setNewListName(e.target.value)}
+                                className="mt-2"
+                            />
+                        )}
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                            <Button onClick={handleSaveToList} disabled={isSubmitting || !selectedList || (selectedList === 'new' && !newListName)}>
+                                {isSubmitting && <Loader2 className="animate-spin mr-2"/>}
+                                Save
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+                )}
+
+              </div>
             </CardContent>
           </Card>
         </div>

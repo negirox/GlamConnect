@@ -79,6 +79,7 @@ export default function BrandDashboardPage() {
 
     useEffect(() => {
         fetchBrandData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [router])
     
     const onNewListSubmit = async (values: z.infer<typeof newListSchema>) => {
@@ -253,13 +254,13 @@ export default function BrandDashboardPage() {
                     <CardContent>
                          <div className="space-y-4">
                             {savedLists.length > 0 ? savedLists.map((list, i) => (
-                                <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
+                                <Link href="/brand/dashboard" key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg hover:bg-primary/30 transition-colors">
                                     <div>
                                         <p className="font-semibold">{list.name}</p>
                                         <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
                                     </div>
                                     <Button variant="outline" size="sm">View</Button>
-                                </div>
+                                </Link>
                             )) : (
                                 <div className="text-center text-muted-foreground pt-8">
                                     <p>You haven't created any saved lists yet.</p>

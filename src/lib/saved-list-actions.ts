@@ -47,7 +47,7 @@ function writeSavedLists(lists: SavedList[]) {
     const headerString = SAVED_LIST_HEADERS.join(',');
     const rows = lists.map(list => {
         const modelIdsString = list.modelIds.join(';');
-        return [list.id, `"${list.name}"`, list.brandId, `"${modelIdsString}"`].join(',');
+        return [list.id, `"${list.name.replace(/"/g, '""')}"`, list.brandId, `"${modelIdsString}"`].join(',');
     });
     const csvString = [headerString, ...rows].join('\n') + '\n';
     fs.writeFileSync(savedListsCsvFilePath, csvString, 'utf-8');
@@ -88,9 +88,10 @@ export async function addModelToList(listId: string, modelId: string) {
 
     if (!lists[listIndex].modelIds.includes(modelId)) {
         lists[listIndex].modelIds.push(modelId);
+        writeSavedLists(lists);
+        revalidatePath('/brand/dashboard');
+        revalidatePath(`/profile/${modelId}`);
+    } else {
+        throw new Error('Model is already in this list.');
     }
-
-    writeSavedLists(lists);
-    revalidatePath('/brand/dashboard');
-    revalidatePath(`/profile/${modelId}`);
 }
