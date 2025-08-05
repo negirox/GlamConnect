@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getGigById, Gig, applyForGig, getApplicantsByGigId } from '@/lib/gig-actions';
+import { getGigById, Gig, applyForGig } from '@/lib/gig-actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -27,21 +27,24 @@ export default function GigPage({ params }: GigPageProps) {
     const [isApplying, setIsApplying] = useState(false);
     const [hasConsented, setHasConsented] = useState(false);
     const { toast } = useToast();
+    const gigId = params.id;
 
 
     useEffect(() => {
-        async function fetchData() {
+        async function fetchData(id: string) {
             setLoading(true);
             const [fetchedGig, sessionData] = await Promise.all([
-                getGigById(params.id),
+                getGigById(id),
                 getSession()
             ]);
             setGig(fetchedGig);
             setSession(sessionData);
             setLoading(false);
         }
-        fetchData();
-    }, [params.id]);
+        if (gigId) {
+            fetchData(gigId);
+        }
+    }, [gigId]);
     
     const handleApply = async () => {
         if (!gig || !session.isLoggedIn || !session.id) {

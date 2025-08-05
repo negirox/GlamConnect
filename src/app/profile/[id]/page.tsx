@@ -41,16 +41,19 @@ type ProfilePageProps = {
 export default function ProfilePage({ params }: ProfilePageProps) {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
+  const modelId = params.id;
 
   useEffect(() => {
-    const fetchModel = async () => {
+    const fetchModel = async (id: string) => {
       setLoading(true);
-      const fetchedModel = await getModelById(params.id);
+      const fetchedModel = await getModelById(id);
       setModel(fetchedModel || null);
       setLoading(false);
     };
-    fetchModel();
-  }, [params.id]);
+    if (modelId) {
+        fetchModel(modelId);
+    }
+  }, [modelId]);
 
 
   if (loading) {
