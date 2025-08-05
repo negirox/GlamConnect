@@ -6,6 +6,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PieChart, Pie, Cell } from 'recharts';
 import { Users, Briefcase, UserCheck, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const userDistributionData = [
   { name: 'Models', value: 400, fill: 'hsl(var(--chart-1))' },
@@ -29,6 +30,31 @@ const chartConfig = {
   verifiedModels: { label: "Verified Models", color: "hsl(var(--accent))" },
   pendingModels: { label: "Pending Models", color: "hsl(var(--destructive))" },
 }
+
+const ClientOnlyPieChart = () => {
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    if (!isClient) {
+        return null;
+    }
+
+    return (
+        <PieChart>
+            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <Pie data={userDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                {userDistributionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+            </Pie>
+            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+        </PieChart>
+    );
+};
+
 
 export default function AdminDashboardPage() {
     return (
@@ -86,15 +112,7 @@ export default function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent className="h-80">
                          <ChartContainer config={chartConfig} className="w-full h-full">
-                            <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie data={userDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                                    {userDistributionData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                            </PieChart>
+                            <ClientOnlyPieChart />
                         </ChartContainer>
                     </CardContent>
                 </Card>
