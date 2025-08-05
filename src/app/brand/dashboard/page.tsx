@@ -261,7 +261,7 @@ export default function BrandDashboardPage() {
                                         <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
                                     </div>
                                     <Button variant="outline" size="sm" asChild>
-                                        <div onClick={(e) => e.preventDefault()}><Link href={`/brand/saved-lists/${list.id}`}>View</Link></div>
+                                        <Link href={`/brand/saved-lists/${list.id}`}>View</Link>
                                     </Button>
                                 </Link>
                             )) : (
