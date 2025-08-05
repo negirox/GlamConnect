@@ -1,6 +1,9 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   SidebarProvider,
   Sidebar,
@@ -16,11 +19,10 @@ import {
   BadgeCheck,
   Users,
   LogOut,
+  Loader2,
 } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { logout } from '@/lib/auth-actions';
+import { getSession, logout } from '@/lib/auth-actions';
 
 const adminNavLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -34,11 +36,33 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkAuth() {
+      const session = await getSession();
+      if (!session.isLoggedIn || session.role !== 'admin') {
+        router.push('/login');
+      } else {
+        setLoading(false);
+      }
+    }
+    checkAuth();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen">
-        <Sidebar className="fixed top-16 h-[calc(100vh-4rem)] z-40">
+      <div className="flex h-screen bg-background">
+        <Sidebar className="fixed top-0 h-screen z-40">
           <SidebarHeader>
             <Logo />
           </SidebarHeader>
@@ -61,15 +85,13 @@ export default function AdminLayout({
             </SidebarMenu>
           </SidebarContent>
           <form action={logout} className="p-2">
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                  <LogOut />
-                  <span>Logout</span>
-              </Button>
+            <Button variant="ghost" className="w-full justify-start gap-2">
+              <LogOut />
+              <span>Logout</span>
+            </Button>
           </form>
         </Sidebar>
-        <main className="flex-1 ml-64 p-8 pt-24">
-            {children}
-        </main>
+        <main className="flex-1 ml-64 p-8">{children}</main>
       </div>
     </SidebarProvider>
   );
