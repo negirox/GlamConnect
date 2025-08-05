@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,11 +8,15 @@ import { Model } from '@/lib/mock-data';
 import { Separator } from '@/components/ui/separator';
 import { getModels } from '@/lib/data-actions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Filter } from 'lucide-react';
 
 export default function SearchPage() {
   const [allModels, setAllModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     async function loadModels() {
@@ -25,11 +30,12 @@ export default function SearchPage() {
   }, []);
 
   const handleFilterChange = (filters: any) => {
-    console.log('Applying filters:', filters);
-    let newFilteredModels = allModels;
+    let newFilteredModels = [...allModels];
 
     if (filters.location) {
-        newFilteredModels = newFilteredModels.filter(model => model.location.toLowerCase().includes(filters.location.toLowerCase()));
+        newFilteredModels = newFilteredModels.filter(model => 
+            model.location && model.location.toLowerCase().includes(filters.location.toLowerCase().trim())
+        );
     }
     if (filters.height) {
         newFilteredModels = newFilteredModels.filter(model => model.height >= parseInt(filters.height, 10));
@@ -44,12 +50,31 @@ export default function SearchPage() {
     setFilteredModels(newFilteredModels);
   };
 
+  const SearchFiltersDesktop = () => (
+    <aside className="w-full md:w-1/4 lg:w-1/5 md:sticky top-24 h-full">
+        <SearchFilters onFilterChange={handleFilterChange} />
+    </aside>
+  );
+
+  const SearchFiltersMobile = () => (
+     <Accordion type="single" collapsible className="w-full mb-6">
+        <AccordionItem value="filters">
+            <AccordionTrigger>
+                <h2 className="text-xl font-headline font-semibold flex items-center">
+                    <Filter className="mr-2" /> Show Filters
+                </h2>
+            </AccordionTrigger>
+            <AccordionContent>
+                 <SearchFilters onFilterChange={handleFilterChange} />
+            </AccordionContent>
+        </AccordionItem>
+    </Accordion>
+  );
+
   return (
     <div className="container mx-auto px-4 md:px-6 py-8">
       <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
-        <aside className="w-full md:w-1/4 lg:w-1/5">
-          <SearchFilters onFilterChange={handleFilterChange} />
-        </aside>
+        {isMobile ? <SearchFiltersMobile /> : <SearchFiltersDesktop />}
         <main className="w-full md:w-3/4 lg:w-4/5">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-headline font-bold">
