@@ -15,11 +15,7 @@ import { AlertTriangle } from "lucide-react";
 import { getGigsByBrandId, Gig, getApplicantsByGigId } from "@/lib/gig-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-
-const savedLists = [
-    { name: "Swimwear Campaign Favorites", count: 5 },
-    { name: "Potential Runway Models", count: 18 },
-]
+import { getListsByBrandId, SavedList } from "@/lib/saved-list-actions";
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
 
@@ -27,6 +23,7 @@ type GigWithApplicantCount = Gig & { applicantCount: number };
 export default function BrandDashboardPage() {
     const [brand, setBrand] = useState<Brand | null>(null);
     const [gigs, setGigs] = useState<GigWithApplicantCount[]>([]);
+    const [savedLists, setSavedLists] = useState<SavedList[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     
@@ -43,7 +40,11 @@ export default function BrandDashboardPage() {
                 const fetchedBrand = await getBrandByEmail(session.email);
                 setBrand(fetchedBrand);
                 if (fetchedBrand) {
-                    const fetchedGigs = await getGigsByBrandId(fetchedBrand.id);
+                    const [fetchedGigs, fetchedLists] = await Promise.all([
+                        getGigsByBrandId(fetchedBrand.id),
+                        getListsByBrandId(fetchedBrand.id)
+                    ]);
+
                     const gigsWithCounts = await Promise.all(
                         fetchedGigs.map(async (gig) => {
                             const applicants = await getApplicantsByGigId(gig.id);
@@ -51,6 +52,7 @@ export default function BrandDashboardPage() {
                         })
                     );
                     setGigs(gigsWithCounts);
+                    setSavedLists(fetchedLists);
                 }
             } catch (error) {
                 console.error("Failed to fetch brand data:", error);
@@ -193,15 +195,19 @@ export default function BrandDashboardPage() {
                     </CardHeader>
                     <CardContent>
                          <div className="space-y-4">
-                            {savedLists.map((list, i) => (
+                            {savedLists.length > 0 ? savedLists.map((list, i) => (
                                 <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
                                     <div>
                                         <p className="font-semibold">{list.name}</p>
-                                        <p className="text-sm text-muted-foreground">{list.count} Models</p>
+                                        <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
                                     </div>
                                     <Button variant="outline" size="sm">View</Button>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="text-center text-muted-foreground pt-8">
+                                    <p>You haven't created any saved lists yet.</p>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
