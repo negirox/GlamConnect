@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ModelCard } from '@/components/model-card';
 import { Model } from '@/lib/mock-data';
 import { getModels } from '@/lib/data-actions';
@@ -24,21 +24,22 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
   const [savingModelId, setSavingModelId] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const listId = params.id;
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const [models, fetchedList] = await Promise.all([
+        getModels(),
+        getListById(listId)
+    ]);
+    setAllModels(models);
+    setList(fetchedList);
+    setLoading(false);
+  }, [listId]);
 
   useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      const [models, fetchedList] = await Promise.all([
-          getModels(),
-          getListById(params.id)
-      ]);
-      setAllModels(models);
-      setList(fetchedList);
-      setLoading(false);
-    }
     loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadData]);
   
   const handleAddModel = async (modelId: string) => {
     if (!list) return;
@@ -68,7 +69,7 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
         <div className="flex justify-between items-center mb-6">
             <div>
                  <Button variant="ghost" size="sm" asChild className="mb-2">
-                    <Link href={`/brand/saved-lists/${params.id}`}>
+                    <Link href={`/brand/saved-lists/${listId}`}>
                         <ArrowLeft className="mr-2"/>
                         Back to List
                     </Link>
