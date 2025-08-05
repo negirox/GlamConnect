@@ -14,10 +14,8 @@ import {
 import { Logo } from '@/components/logo';
 import {
   LayoutDashboard,
-  CheckBadge,
+  BadgeCheck,
   Users,
-  Flag,
-  Sparkles,
   LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -27,7 +25,7 @@ import { logout } from '@/lib/auth-actions';
 
 const adminNavLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/approvals', label: 'Portfolio Approvals', icon: CheckBadge },
+  { href: '/admin/approvals', label: 'Portfolio Approvals', icon: BadgeCheck },
   { href: '/admin/users', label: 'User Management', icon: Users },
 ];
 
