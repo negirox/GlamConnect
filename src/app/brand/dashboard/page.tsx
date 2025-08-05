@@ -155,10 +155,10 @@ export default function BrandDashboardPage() {
                         <ScrollArea className="h-60">
                             <div className="space-y-4 pr-4">
                                 {gigs.length > 0 ? gigs.map((gig, i) => (
-                                    <div key={i} className="flex justify-between items-center p-3 bg-primary/20 rounded-lg">
-                                        <div className="flex items-center gap-3">
-                                            <span title={`Status: ${gig.status}`} className={`block h-3 w-3 rounded-full ${statusColor[gig.status]}`}></span>
-                                            <div>
+                                    <div key={i} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-primary/20 rounded-lg gap-3">
+                                        <div className="flex items-start gap-3">
+                                            <span title={`Status: ${gig.status}`} className={`block h-3 w-3 rounded-full mt-1.5 shrink-0 ${statusColor[gig.status]}`}></span>
+                                            <div className="overflow-hidden">
                                                 <p className="font-semibold truncate">{gig.title}</p>
                                                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                                                     <Clock className="h-3 w-3"/>
@@ -166,7 +166,7 @@ export default function BrandDashboardPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                                             <Badge variant="secondary">{gig.applicantCount} Applicants</Badge>
                                             <Button variant="outline" size="sm" asChild>
                                                 <Link href={`/gigs/${gig.id}`}>View</Link>
