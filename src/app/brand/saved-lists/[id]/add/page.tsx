@@ -15,10 +15,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 
 type AddModelsPageProps = {
-  params: { id: string };
+    params: { id: string };
 };
 
 export default function AddModelsPage({ params }: AddModelsPageProps) {
+  const [allModels, setAllModels] = useState<Model[]>([]);
   const [list, setList] = useState<SavedList | null>(null);
   const [allModels, setAllModels] = useState<Model[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
@@ -32,22 +33,23 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
   useEffect(() => {
     async function loadData(id: string) {
         setLoading(true);
-        const [models, fetchedList] = await Promise.all([
-            getModels(),
+        try {
+            const [models, fetchedList] = await Promise.all([
+                getModels(),
             getListById(id)
-        ]);
-        setAllModels(models);
-        setList(fetchedList);
+            ]);
+            setAllModels(models);
+            setList(fetchedList);
         if (fetchedList) {
             setSelectedModels(fetchedList.modelIds);
         }
-        setLoading(false);
-    }
+            setLoading(false);
+        }
     if(listId) {
         loadData(listId);
     }
   }, [listId]);
-
+  
   const handleToggleModel = (modelId: string) => {
     setSelectedModels(prev =>
       prev.includes(modelId)
@@ -76,7 +78,7 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
 
   if (!list) {
     return <div className="container text-center py-12">List not found.</div>;
-  }
+    }
 
   const availableModels = allModels.filter(m => !list.modelIds.includes(m.id));
 
@@ -98,23 +100,23 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
                 Save Changes
             </Button>
         </div>
-
+      
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {allModels.map(model => {
                 const isSelected = selectedModels.includes(model.id);
-                return (
+                  return (
                 <Card 
                     key={model.id} 
                     onClick={() => handleToggleModel(model.id)}
                     className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`}
-                >
+                            >
                     <CardHeader className="p-0 relative">
                         <Image src={model.profilePicture} alt={model.name} width={300} height={400} className="rounded-t-lg object-cover aspect-[3/4]" />
                         {isSelected && (
                             <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
                                 <CheckCircle className="h-5 w-5"/>
-                            </div>
-                        )}
+            </div>
+        )}
                     </CardHeader>
                     <CardContent className="p-3">
                         <p className="font-semibold truncate">{model.name}</p>

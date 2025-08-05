@@ -24,85 +24,111 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type SavedListPageProps = {
-  params: { id: string };
+    params: { id: string };
 };
 
 export default function SavedListPage({ params }: SavedListPageProps) {
-  const [list, setList] = useState<SavedList | null>(null);
-  const [models, setModels] = useState<Model[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+    const [list, setList] = useState<SavedList | null>(null);
+    const [models, setModels] = useState<Model[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [removingModelId, setRemovingModelId] = useState<string | null>(null);
+    const { toast } = useToast();
+    const router = useRouter();
 
   const listId = params.id;
 
-  useEffect(() => {
+    useEffect(() => {
     async function fetchListData(id: string) {
-        setLoading(true);
-        try {
+            setLoading(true);
+            try {
             const fetchedList = await getListById(id);
-            if (fetchedList) {
-                setList(fetchedList);
-                const modelPromises = fetchedList.modelIds.map(id => getModelById(id));
+                if (fetchedList) {
+                    setList(fetchedList);
+                    const modelPromises = fetchedList.modelIds.map(id => getModelById(id));
                 const resolvedModels = (await Promise.all(modelPromises)).filter(Boolean) as Model[];
                 setModels(resolvedModels);
-            }
-        } catch (error) {
+                }
+            } catch (error) {
             console.error(error);
             toast({ title: "Error", description: "Failed to fetch list data.", variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
+            } finally {
+                setLoading(false);
+            }
     }
     if (listId) {
         fetchListData(listId);
-    }
+        }
   }, [listId, toast]);
 
-  const handleRemoveModel = async (modelId: string) => {
-    if (!list) return;
-    try {
-        await removeModelFromList(list.id, modelId);
+    const handleRemoveModel = async (modelId: string) => {
+        if (!list) return;
+        setRemovingModelId(modelId);
+        try {
+            await removeModelFromList(list.id, modelId);
         setModels(prev => prev.filter(m => m.id !== modelId));
         toast({ title: "Model Removed", description: "The model has been removed from your list." });
     } catch (error) {
         console.error(error);
         toast({ title: "Error", description: "Failed to remove model.", variant: "destructive" });
+        }
     }
-  }
 
-  if (loading) {
-    return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin" /></div>;
-  }
+    if (loading) {
+        return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin" /></div>;
+    }
 
-  if (!list) {
+    if (!list) {
     return <div className="container text-center py-12">List not found.</div>;
-  }
+    }
 
-  return (
+    return (
     <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
         <div className="flex flex-col md:flex-row justify-between md:items-center mb-8 gap-4">
              <Button variant="ghost" size="sm" asChild className="mb-2 self-start">
-                <Link href="/brand/dashboard">
-                    <ArrowLeft className="mr-2"/>
-                    Back to Dashboard
-                </Link>
-            </Button>
+                        <Link href="/brand/dashboard">
+                            <ArrowLeft className="mr-2"/>
+                            Back to Dashboard
+                        </Link>
+                    </Button>
             <div className='text-center md:text-left'>
                 <h1 className="text-3xl font-headline font-bold">{list.name}</h1>
                 <p className="text-muted-foreground mt-1">{list.modelIds.length} model(s) in this list</p>
-            </div>
-            <Button asChild>
-                <Link href={`/brand/saved-lists/${list.id}/add`}>
+                </div>
+                <div className="flex gap-2">
+                    <Button asChild>
+                        <Link href={`/brand/saved-lists/${list.id}/add`}>
                     <PlusCircle className="mr-2"/> Add Models
-                </Link>
-            </Button>
-        </div>
+                        </Link>
+                    </Button>
+                     <Dialog>
+                        <DialogTrigger asChild>
+                           <Button variant="destructive"><Trash2 className="mr-2"/> Delete List</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                <DialogDescription>
+                                    This action cannot be undone. This will permanently delete your list "{list.name}".
+                                </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                                <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                                <Button variant="destructive" onClick={handleDeleteList} disabled={isDeleting}>
+                                    {isDeleting && <Loader2 className="mr-2 animate-spin"/>}
+                                    Yes, delete list
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
 
-        {models.length > 0 ? (
+            {models.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {models.map(model => (
-                    <div key={model.id} className="relative group">
-                        <ModelCard model={model} />
+                    {models.map(model => (
+                        <div key={model.id} className="relative group">
+                            <ModelCard model={model} />
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
@@ -122,10 +148,10 @@ export default function SavedListPage({ params }: SavedListPageProps) {
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
-                    </div>
-                ))}
-            </div>
-        ) : (
+                        </div>
+                    ))}
+                </div>
+            ) : (
             <Card className="text-center py-20">
                 <CardHeader>
                     <CardTitle>This List is Empty</CardTitle>
@@ -137,7 +163,7 @@ export default function SavedListPage({ params }: SavedListPageProps) {
                     </Button>
                 </CardFooter>
             </Card>
-        )}
-    </div>
-  );
+            )}
+        </div>
+    );
 }
