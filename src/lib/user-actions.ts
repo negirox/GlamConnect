@@ -15,7 +15,7 @@ const signupSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  role: z.enum(["model", "brand"], {
+  role: z.enum(["model", "brand", "admin"], {
     required_error: "You need to select a role.",
   }),
 });
@@ -23,7 +23,7 @@ const signupSchema = z.object({
 type User = z.infer<typeof signupSchema> & { id: string };
 
 // Helper to read and parse the users CSV
-function readUsers(): { headers: string[], users: User[] } {
+export function readUsers(): { headers: string[], users: User[] } {
   if (!fs.existsSync(usersCsvFilePath)) {
     fs.writeFileSync(usersCsvFilePath, 'id,name,email,password,role\n', 'utf-8');
   }
@@ -31,6 +31,11 @@ function readUsers(): { headers: string[], users: User[] } {
   const csvData = fs.readFileSync(usersCsvFilePath, 'utf-8');
   const lines = csvData.trim().split('\n');
   const headers = (lines.length > 0 && lines[0].trim() !== '') ? lines[0].split(',').map(h => h.trim()) : ['id', 'name', 'email', 'password', 'role'];
+  
+  if (lines.length <= 1) { // If only header or empty, add default admin
+     fs.appendFileSync(usersCsvFilePath, '1,Admin,admin@glamconnect.com,password123,admin\n');
+     lines.push('1,Admin,admin@glamconnect.com,password123,admin');
+  }
   
   const users = lines.slice(1).map(line => {
     if(line.trim() === '') return null;
@@ -40,7 +45,7 @@ function readUsers(): { headers: string[], users: User[] } {
       name: values[1],
       email: values[2],
       password: values[3],
-      role: values[4],
+      role: values[4] as 'model' | 'brand' | 'admin',
     } as User;
   }).filter(u => u !== null) as User[];
 
@@ -99,6 +104,7 @@ export async function createUser(userData: z.infer<typeof signupSchema>) {
 
     revalidatePath('/login');
     revalidatePath('/signup');
+    revalidatePath('/admin/users');
 
     return { success: true, message: 'User created successfully.', user: newUser };
 }
@@ -108,4 +114,9 @@ export async function getUser(email: string) {
     console.log(`Pretending to fetch user for email: ${email}`);
     const { users } = readUsers();
     return users.find(u => u.email === email);
+}
+
+export async function getAllUsers() {
+    const { users } = readUsers();
+    return users;
 }

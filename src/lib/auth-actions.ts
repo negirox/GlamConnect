@@ -14,7 +14,7 @@ type User = {
     name: string;
     email: string;
     password?: string;
-    role: 'model' | 'brand';
+    role: 'model' | 'brand' | 'admin';
 }
 
 function readUsers(): User[] {
@@ -39,7 +39,7 @@ function readUsers(): User[] {
       name: values[nameIndex],
       email: values[emailIndex],
       password: values[passwordIndex],
-      role: values[roleIndex] as 'model' | 'brand',
+      role: values[roleIndex] as 'model' | 'brand' | 'admin',
     };
   });
 }
@@ -99,6 +99,8 @@ export async function authenticate(
 
     if (userForRedirect?.role === 'brand') {
         redirect('/brand/dashboard');
+    } else if (userForRedirect?.role === 'admin') {
+        redirect('/admin/dashboard');
     } else {
         redirect('/account/profile');
     }

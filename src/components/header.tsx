@@ -15,6 +15,7 @@ import {
   Briefcase,
   PlusCircle,
   LayoutDashboard,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from './logo';
@@ -25,7 +26,7 @@ type NavLinkItem = {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles: ('model' | 'brand' | 'guest')[];
+  roles: ('model' | 'brand' | 'guest' | 'admin')[];
 };
 
 const allNavLinks: NavLinkItem[] = [
@@ -36,6 +37,7 @@ const allNavLinks: NavLinkItem[] = [
   { href: '/account/profile', label: 'My Profile', icon: User, roles: ['model'] },
   { href: '/brand/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['brand'] },
   { href: '/gigs/post', label: 'Post Gig', icon: PlusCircle, roles: ['brand'] },
+  { href: '/admin/dashboard', label: 'Admin', icon: Shield, roles: ['admin'] },
 ];
 
 export function Header() {
@@ -68,7 +70,7 @@ export function Header() {
   }, [pathname]);
 
 
-  const NavLink = ({ href, label, icon: Icon }: NavLinkItem) => {
+  const NavLink = ({ href, label, icon: Icon }: Omit<NavLinkItem, 'roles'>) => {
     const isActive = pathname.startsWith(href);
     return (
       <Link
