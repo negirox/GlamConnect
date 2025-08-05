@@ -69,6 +69,9 @@ export function Header() {
     fetchSession();
   }, [pathname]);
 
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
 
   const NavLink = ({ href, label, icon: Icon }: Omit<NavLinkItem, 'roles'>) => {
     const isActive = pathname.startsWith(href);
