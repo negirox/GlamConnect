@@ -9,7 +9,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarInset,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
 import {
@@ -38,36 +37,40 @@ export default function AdminLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
-          <Logo />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {adminNavLinks.map((link) => (
-              <SidebarMenuItem key={link.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === link.href}
-                  tooltip={link.label}
-                >
-                  <Link href={link.href}>
-                    <link.icon />
-                    <span>{link.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-        <form action={logout} className="p-2">
-            <Button variant="ghost" className="w-full justify-start gap-2">
-                <LogOut />
-                <span>Logout</span>
-            </Button>
-        </form>
-      </Sidebar>
-      <SidebarInset>{children}</SidebarInset>
+      <div className="flex h-screen">
+        <Sidebar className="fixed top-16 h-[calc(100vh-4rem)] z-40">
+          <SidebarHeader>
+            <Logo />
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarMenu>
+              {adminNavLinks.map((link) => (
+                <SidebarMenuItem key={link.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === link.href}
+                    tooltip={link.label}
+                  >
+                    <Link href={link.href}>
+                      <link.icon />
+                      <span>{link.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <form action={logout} className="p-2">
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                  <LogOut />
+                  <span>Logout</span>
+              </Button>
+          </form>
+        </Sidebar>
+        <main className="flex-1 ml-64 p-8 pt-24">
+            {children}
+        </main>
+      </div>
     </SidebarProvider>
   );
 }
