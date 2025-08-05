@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState, useFormStatus } from "react";
 import { authenticate } from "@/lib/auth-actions";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
@@ -27,7 +27,7 @@ function LoginButton() {
 }
 
 export default function LoginPage() {
-  const [errorMessage, dispatch] = useFormState(authenticate, undefined);
+  const [errorMessage, dispatch] = useActionState(authenticate, undefined);
 
   return (
     <div className="container mx-auto flex h-[calc(100vh-8rem)] items-center justify-center px-4 md:px-6">
