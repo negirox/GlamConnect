@@ -2,8 +2,8 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PieChart, Pie, Cell } from 'recharts';
 import { Users, Briefcase, UserCheck, Shield } from "lucide-react";
 
@@ -93,7 +93,7 @@ export default function AdminDashboardPage() {
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
                                 </Pie>
-                                <Legend content={<p className="text-sm text-muted-foreground">User roles distribution</p>} />
+                                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
                             </PieChart>
                         </ChartContainer>
                     </CardContent>
@@ -110,7 +110,7 @@ export default function AdminDashboardPage() {
                                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                                 <YAxis />
                                 <Tooltip content={<ChartTooltipContent />} />
-                                <Legend />
+                                <ChartLegend content={<ChartLegendContent />} />
                                 <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
                             </BarChart>
                         </ResponsiveContainer>
