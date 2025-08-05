@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -267,7 +268,7 @@ const ChartLegendContent = React.forwardRef<
     }
 >(
   (
-    { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey, ...props },
+    { className, hideIcon = false, payload, nameKey, ...props },
     ref
   ) => {
     const { config } = useChart()
@@ -281,7 +282,7 @@ const ChartLegendContent = React.forwardRef<
         ref={ref}
         className={cn(
           "flex items-center justify-center gap-4",
-          verticalAlign === "top" ? "pb-3" : "pt-3",
+          props.verticalAlign === "top" ? "pb-3" : "pt-3",
           className
         )}
         {...props}

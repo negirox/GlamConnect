@@ -142,7 +142,7 @@ export default function GigPage({ params }: GigPageProps) {
         )
     }
     
-    const InfoItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
+    const InfoItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: React.ReactNode }) => (
         <div className="flex items-start gap-3">
             <Icon className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
             <div>
