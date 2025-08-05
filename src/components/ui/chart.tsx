@@ -268,7 +268,7 @@ const ChartLegendContent = React.forwardRef<
     }
 >(
   (
-    { className, hideIcon = false, payload, nameKey, ...props },
+    { className, hideIcon = false, payload, nameKey, verticalAlign, ...props },
     ref
   ) => {
     const { config } = useChart()
@@ -282,7 +282,7 @@ const ChartLegendContent = React.forwardRef<
         ref={ref}
         className={cn(
           "flex items-center justify-center gap-4",
-          props.verticalAlign === "top" ? "pb-3" : "pt-3",
+          verticalAlign === "top" ? "pb-3" : "pt-3",
           className
         )}
         {...props}
