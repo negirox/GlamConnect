@@ -12,7 +12,7 @@ import { getBrandByEmail, Brand } from "@/lib/brand-actions";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { getGigsByBrandId, Gig } from "@/lib/gig-actions";
+import { getGigsByBrandId, Gig, getApplicantsByGigId } from "@/lib/gig-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { getListsByBrandId, createList, SavedList } from "@/lib/saved-list-actions";
