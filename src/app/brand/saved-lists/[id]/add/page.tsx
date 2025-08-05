@@ -24,18 +24,17 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
   const [savingModelId, setSavingModelId] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
-  const listId = params.id;
 
   const loadData = useCallback(async () => {
     setLoading(true);
     const [models, fetchedList] = await Promise.all([
         getModels(),
-        getListById(listId)
+        getListById(params.id)
     ]);
     setAllModels(models);
     setList(fetchedList);
     setLoading(false);
-  }, [listId]);
+  }, [params.id]);
 
   useEffect(() => {
     loadData();
@@ -69,7 +68,7 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
         <div className="flex justify-between items-center mb-6">
             <div>
                  <Button variant="ghost" size="sm" asChild className="mb-2">
-                    <Link href={`/brand/saved-lists/${listId}`}>
+                    <Link href={`/brand/saved-lists/${params.id}`}>
                         <ArrowLeft className="mr-2"/>
                         Back to List
                     </Link>
