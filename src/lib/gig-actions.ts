@@ -158,6 +158,21 @@ export async function getGigById(id: string): Promise<Gig | null> {
     return allGigs.find(gig => gig.id === id) || null;
 }
 
+export async function updateGig(gigId: string, data: Partial<Gig>) {
+    const gigs = readGigs();
+    const gigIndex = gigs.findIndex(g => g.id === gigId);
+
+    if (gigIndex === -1) {
+        throw new Error('Gig not found');
+    }
+
+    gigs[gigIndex] = { ...gigs[gigIndex], ...data };
+    writeGigs(gigs);
+
+    revalidatePath('/admin/gig-approvals');
+    revalidatePath(`/gigs/${gigId}`);
+}
+
 // Application Functions
 
 function readApplications(): Application[] {

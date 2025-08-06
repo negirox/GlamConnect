@@ -2,8 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getGigs, Gig } from '@/lib/gig-actions';
-import { updateModel } from '@/lib/model-actions';
+import { getGigs, Gig, updateGig } from '@/lib/gig-actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, X, Loader2, Briefcase, MapPin, CalendarDays, DollarSign } from 'lucide-react';
@@ -31,13 +30,7 @@ export default function GigApprovalsPage() {
     const handleApproval = async (gigId: string, newStatus: 'Verified' | 'Rejected') => {
         setUpdatingId(gigId);
         try {
-            // We are using updateModel here which is incorrect. This needs to be a new function `updateGig`.
-            // Let's assume there is an `updateGig` function in `gig-actions.ts`.
-            // Since I cannot modify the backend, I will simulate this action.
-            // In a real scenario, you would call `updateGig(gigId, { status: newStatus });`
-            
-            // This is a placeholder for the actual update logic.
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await updateGig(gigId, { status: newStatus });
             
             setPendingGigs(prev => prev.filter(g => g.id !== gigId));
             toast({
@@ -115,7 +108,7 @@ export default function GigApprovalsPage() {
                     ))}
                 </div>
             ) : (
-                <div className="text-center text-muted-foreground py-20 bg-card rounded-lg">
+                <div className="text-center text-muted-foreground py-20 bg-card rounded-lg border">
                     <p className="text-lg font-medium">No Pending Gigs</p>
                     <p>All gig submissions have been processed.</p>
                 </div>
