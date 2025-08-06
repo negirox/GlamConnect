@@ -9,15 +9,15 @@ import { useState, useEffect } from "react";
 import { getAllUsers } from "@/lib/user-actions";
 import { getGigs } from "@/lib/gig-actions";
 import { getModels } from "@/lib/data-actions";
+import { Model } from "@/lib/mock-data";
 
 const chartConfig = {
   models: { label: "Models", color: "hsl(var(--chart-1))" },
   brands: { label: "Brands", color: "hsl(var(--chart-2))" },
   admins: { label: "Admins", color: "hsl(var(--chart-3))" },
-  verifiedGigs: { label: "Verified Gigs", color: "hsl(var(--primary))" },
-  pendingGigs: { label: "Pending Gigs", color: "hsl(var(--secondary))" },
-  verifiedModels: { label: "Verified Models", color: "hsl(var(--accent))" },
-  pendingModels: { label: "Pending Models", color: "hsl(var(--destructive))" },
+  verifiedGigs: { label: "Verified", color: "hsl(var(--primary))" },
+  pendingGigs: { label: "Pending", color: "hsl(var(--destructive))" },
+  location: { label: "Models", color: "hsl(var(--chart-4))" },
 }
 
 type DashboardData = {
@@ -28,8 +28,8 @@ type DashboardData = {
     openGigs: number;
     pendingModels: number;
     pendingGigs: number;
-    verifiedModels: number;
-    verifiedGigs: number;
+    locationData: { name: string; count: number }[];
+    gigStatusData: { name: string; value: number; fill: string }[];
 }
 
 export default function AdminDashboardPage() {
@@ -52,8 +52,26 @@ export default function AdminDashboardPage() {
             const verifiedGigs = gigs.filter(g => g.status === 'Verified').length;
             const pendingGigs = gigs.filter(g => g.status === 'Pending').length;
             
-            const verifiedModels = models.filter(m => m.verificationStatus === 'Verified').length;
             const pendingModels = models.filter(m => m.verificationStatus === 'Pending').length;
+            
+            // Process location data
+            const locationCounts: Record<string, number> = {};
+            models.forEach(model => {
+                if(model.location) {
+                    const city = model.location.split(',')[0].trim();
+                    locationCounts[city] = (locationCounts[city] || 0) + 1;
+                }
+            });
+
+            const locationData = Object.entries(locationCounts)
+                .map(([name, count]) => ({ name, count }))
+                .sort((a,b) => b.count - a.count)
+                .slice(0, 5); // Top 5 locations
+
+            const gigStatusData = [
+                { name: 'Verified', value: verifiedGigs, fill: 'hsl(var(--chart-1))' },
+                { name: 'Pending', value: pendingGigs, fill: 'hsl(var(--chart-2))' },
+            ];
 
             setData({
                 totalUsers: users.length,
@@ -63,8 +81,8 @@ export default function AdminDashboardPage() {
                 openGigs: verifiedGigs,
                 pendingModels,
                 pendingGigs,
-                verifiedModels,
-                verifiedGigs,
+                locationData,
+                gigStatusData,
             });
             setLoading(false);
         }
@@ -76,13 +94,6 @@ export default function AdminDashboardPage() {
         { name: 'Models', value: data.modelCount, fill: 'hsl(var(--chart-1))' },
         { name: 'Brands', value: data.brandCount, fill: 'hsl(var(--chart-2))' },
         { name: 'Admins', value: data.adminCount, fill: 'hsl(var(--chart-3))' },
-    ] : [];
-
-    const contentStatusData = data ? [
-        { name: 'Verified Gigs', count: data.verifiedGigs },
-        { name: 'Pending Gigs', count: data.pendingGigs },
-        { name: 'Verified Models', count: data.verifiedModels },
-        { name: 'Pending Models', count: data.pendingModels },
     ] : [];
 
     if (loading) {
@@ -130,8 +141,8 @@ export default function AdminDashboardPage() {
                 </Card>
             </div>
 
-            <div className="grid gap-8 md:grid-cols-2">
-                 <Card>
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                 <Card className="lg:col-span-1">
                     <CardHeader>
                         <CardTitle>User Distribution</CardTitle>
                         <CardDescription>A breakdown of user roles on the platform.</CardDescription>
@@ -152,23 +163,44 @@ export default function AdminDashboardPage() {
                        </ChartContainer>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="lg:col-span-2">
                     <CardHeader>
-                        <CardTitle>Content Status</CardTitle>
-                        <CardDescription>Current state of gigs and model profiles.</CardDescription>
+                        <CardTitle>Top 5 Model Locations</CardTitle>
+                        <CardDescription>Cities with the most registered models.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-80">
                       <ChartContainer config={chartConfig} className="w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={contentStatusData}>
+                            <BarChart data={data.locationData}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" tick={{ fontSize: 12 }} angle={-25} textAnchor="end" height={50} />
-                                <YAxis />
+                                <YAxis allowDecimals={false}/>
                                 <ChartTooltip content={<ChartTooltipContent />} />
-                                <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
+                                <Bar dataKey="count" name="Models" fill="hsl(var(--chart-4))" radius={4} />
                             </BarChart>
                         </ResponsiveContainer>
                       </ChartContainer>
+                    </CardContent>
+                </Card>
+                 <Card className="lg:col-span-1">
+                    <CardHeader>
+                        <CardTitle>Gig Status</CardTitle>
+                        <CardDescription>Breakdown of all submitted gigs.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-80">
+                      <ChartContainer config={chartConfig} className="w-full h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                <Pie data={data.gigStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                                    {data.gigStatusData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Pie>
+                                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                       </ChartContainer>
                     </CardContent>
                 </Card>
             </div>
