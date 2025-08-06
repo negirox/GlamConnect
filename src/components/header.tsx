@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Logo } from './logo';
 import { useEffect, useState } from 'react';
 import { getSession, logout } from '@/lib/auth-actions';
+import { ThemeSwitcher } from './theme-switcher';
 
 type NavLinkItem = {
   href: string;
@@ -90,7 +91,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Logo />
         <nav className="hidden md:flex items-center gap-6">
@@ -99,6 +100,7 @@ export function Header() {
           ))}
         </nav>
         <div className="hidden md:flex items-center gap-2">
+            <ThemeSwitcher />
             {session?.isLoggedIn ? (
                  <form action={logout}>
                     <Button variant="ghost" type="submit">
@@ -111,13 +113,14 @@ export function Header() {
                     <Button asChild variant="ghost">
                     <Link href="/login">Log In</Link>
                     </Button>
-                    <Button asChild className="bg-secondary hover:bg-accent">
+                    <Button asChild>
                     <Link href="/signup">Sign Up</Link>
                     </Button>
                 </>
             )}
         </div>
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center">
+          <ThemeSwitcher />
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -146,7 +149,7 @@ export function Header() {
                             <Button asChild variant="ghost">
                                 <Link href="/login">Log In</Link>
                             </Button>
-                            <Button asChild className="bg-secondary hover:bg-accent">
+                            <Button asChild>
                                 <Link href="/signup">Sign Up</Link>
                             </Button>
                         </>
