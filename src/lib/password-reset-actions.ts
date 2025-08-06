@@ -17,7 +17,7 @@ export type PasswordResetRequest = {
 const passwordResetsCsvFilePath = path.join(process.cwd(), 'public', 'password_resets.csv');
 const RESET_HEADERS = ['email', 'phone', 'contactMethod', 'requestedAt', 'status'];
 
-export function readPasswordResetRequests(): PasswordResetRequest[] {
+export async function readPasswordResetRequests(): Promise<PasswordResetRequest[]> {
     if (!fs.existsSync(passwordResetsCsvFilePath)) {
         fs.writeFileSync(passwordResetsCsvFilePath, RESET_HEADERS.join(',') + '\n', 'utf-8');
         return [];
@@ -63,7 +63,7 @@ export async function requestPasswordReset(data: { email: string; phone?: string
     }
     
     // Log the request for the admin
-    const requests = readPasswordResetRequests();
+    const requests = await readPasswordResetRequests();
     const newRequest: PasswordResetRequest = {
         ...data,
         requestedAt: new Date().toISOString(),
@@ -84,7 +84,7 @@ export async function updatePasswordResetStatus(
     requestedAt: string, 
     newStatus: 'completed' | 'rejected'
 ) {
-    const requests = readPasswordResetRequests();
+    const requests = await readPasswordResetRequests();
     const requestIndex = requests.findIndex(req => req.email === email && req.requestedAt === requestedAt);
 
     if (requestIndex === -1) {
