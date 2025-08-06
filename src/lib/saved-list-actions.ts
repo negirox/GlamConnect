@@ -75,6 +75,22 @@ export async function createSavedList(brandId: string, name: string): Promise<Sa
     return newList;
 }
 
+export async function deleteList(listId: string): Promise<{ success: boolean }> {
+    let lists = readSavedLists();
+    const initialLength = lists.length;
+    lists = lists.filter(l => l.id !== listId);
+
+    if (lists.length === initialLength) {
+        throw new Error('List not found');
+    }
+
+    writeSavedLists(lists);
+    revalidatePath('/brand/dashboard');
+    revalidatePath(`/brand/saved-lists/${listId}`);
+    return { success: true };
+}
+
+
 export async function addModelsToList(listId: string, modelIds: string[]): Promise<SavedList> {
     const lists = readSavedLists();
     const listIndex = lists.findIndex(l => l.id === listId);
@@ -82,8 +98,10 @@ export async function addModelsToList(listId: string, modelIds: string[]): Promi
         throw new Error('List not found');
     }
     const list = lists[listIndex];
-    const updatedModelIds = [...new Set([...list.modelIds, ...modelIds])];
-    list.modelIds = updatedModelIds;
+    // This logic was incorrect. It should just set the list to the new list.
+    list.modelIds = [...new Set(modelIds)];
+    lists[listIndex] = list;
+
     writeSavedLists(lists);
     revalidatePath(`/brand/saved-lists/${listId}`);
     return list;

@@ -1,18 +1,17 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getListById, addModelsToList, SavedList } from '@/lib/saved-list-actions';
 import { getModels } from '@/lib/data-actions';
 import { Model } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Loader2, ArrowLeft, PlusCircle, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '@/components/ui/checkbox';
 
 type AddModelsPageProps = {
     params: { id: string };
@@ -21,34 +20,38 @@ type AddModelsPageProps = {
 export default function AddModelsPage({ params }: AddModelsPageProps) {
   const [allModels, setAllModels] = useState<Model[]>([]);
   const [list, setList] = useState<SavedList | null>(null);
-  const [allModels, setAllModels] = useState<Model[]>([]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   
-  const listId = params.id;
-
   useEffect(() => {
-    async function loadData(id: string) {
+    async function loadData() {
         setLoading(true);
         try {
             const [models, fetchedList] = await Promise.all([
                 getModels(),
-            getListById(id)
+                getListById(params.id)
             ]);
             setAllModels(models);
             setList(fetchedList);
-        if (fetchedList) {
-            setSelectedModels(fetchedList.modelIds);
-        }
+            if (fetchedList) {
+                setSelectedModels(fetchedList.modelIds);
+            }
+        } catch (error) {
+            console.error("Failed to load data", error);
+            toast({ title: "Error", description: "Could not load models or list.", variant: "destructive" });
+        } finally {
             setLoading(false);
         }
-    if(listId) {
-        loadData(listId);
     }
-  }, [listId]);
+    
+    if (params.id) {
+        loadData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
   
   const handleToggleModel = (modelId: string) => {
     setSelectedModels(prev =>
@@ -62,8 +65,11 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
     if (!list) return;
     setIsSubmitting(true);
     try {
+        const originalIds = list.modelIds;
+        const modelsToAdd = selectedModels.filter(id => !originalIds.includes(id));
+        
         await addModelsToList(list.id, selectedModels);
-        toast({ title: 'List Updated', description: 'Models have been successfully added to your list.' });
+        toast({ title: 'List Updated', description: `${modelsToAdd.length} model(s) have been added to your list.` });
         router.push(`/brand/saved-lists/${list.id}`);
     } catch (error) {
         toast({ title: 'Error', description: 'Failed to update list.', variant: 'destructive' });
@@ -78,16 +84,14 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
 
   if (!list) {
     return <div className="container text-center py-12">List not found.</div>;
-    }
-
-  const availableModels = allModels.filter(m => !list.modelIds.includes(m.id));
+  }
 
   return (
     <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
         <div className="flex justify-between items-center mb-8">
             <div>
                  <Button variant="ghost" size="sm" asChild className="mb-2">
-                    <Link href={`/brand/saved-lists/${list.id}`}>
+                    <Link href={`/brand/saved-lists/${params.id}`}>
                         <ArrowLeft className="mr-2"/>
                         Back to List
                     </Link>
@@ -95,7 +99,7 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
                 <h1 className="text-3xl font-headline font-bold">Add Models to "{list.name}"</h1>
                 <p className="text-muted-foreground mt-1">Select models to add to your shortlist.</p>
             </div>
-            <Button onClick={handleAddModels} disabled={isSubmitting || selectedModels.length === (list.modelIds.length)}>
+            <Button onClick={handleAddModels} disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : <PlusCircle className="mr-2"/>}
                 Save Changes
             </Button>
@@ -108,15 +112,15 @@ export default function AddModelsPage({ params }: AddModelsPageProps) {
                 <Card 
                     key={model.id} 
                     onClick={() => handleToggleModel(model.id)}
-                    className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`}
-                            >
+                    className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-2 hover:ring-primary/50'}`}
+                >
                     <CardHeader className="p-0 relative">
                         <Image src={model.profilePicture} alt={model.name} width={300} height={400} className="rounded-t-lg object-cover aspect-[3/4]" />
                         {isSelected && (
                             <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
                                 <CheckCircle className="h-5 w-5"/>
-            </div>
-        )}
+                            </div>
+                        )}
                     </CardHeader>
                     <CardContent className="p-3">
                         <p className="font-semibold truncate">{model.name}</p>
