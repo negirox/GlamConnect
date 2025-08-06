@@ -12,6 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
 import {
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getSession, logout } from '@/lib/auth-actions';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 const adminNavLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -86,12 +88,17 @@ export default function AdminLayout({
               ))}
             </SidebarMenu>
           </SidebarContent>
-          <form action={logout} className="p-2">
-            <Button variant="ghost" className="w-full justify-start gap-2">
-              <LogOut />
-              <span>Logout</span>
-            </Button>
-          </form>
+          <SidebarFooter>
+            <div className="flex items-center justify-between p-2">
+                <form action={logout}>
+                    <Button variant="ghost" className="w-full justify-start gap-2">
+                    <LogOut />
+                    <span>Logout</span>
+                    </Button>
+                </form>
+                <ThemeSwitcher />
+            </div>
+          </SidebarFooter>
         </Sidebar>
         <main className="flex-1 ml-64 p-8">{children}</main>
       </div>
