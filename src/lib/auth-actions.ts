@@ -18,7 +18,8 @@ type User = {
 
 
 export async function getSession() {
-  const session = cookies().get('session')?.value;
+  const cookieStore = cookies();
+  const session = cookieStore.get('session')?.value;
   if (!session) return { isLoggedIn: false };
 
   try {

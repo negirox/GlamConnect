@@ -37,7 +37,7 @@ export default function ApprovalsPage() {
             setPendingModels(prev => prev.filter(m => m.id !== modelId));
             toast({
                 title: 'Success',
-                description: `Model has been ${newStatus.toLowerCase()}.`
+                description: `Model has been ${newStatus === 'Verified' ? 'approved' : 'rejected'}.`
             });
         } catch (error) {
             toast({
@@ -89,20 +89,20 @@ export default function ApprovalsPage() {
                                      <Button 
                                         size="sm" 
                                         variant="ghost" 
-                                        className="text-red-500 hover:bg-red-100"
+                                        className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50"
                                         onClick={() => handleApproval(model.id, 'Not Verified')}
                                         disabled={updatingId === model.id}
                                     >
-                                        {updatingId === model.id ? <Loader2 className="animate-spin"/> : <X />}
+                                        {updatingId === model.id ? <Loader2 className="animate-spin"/> : <X className="h-4 w-4" />}
                                     </Button>
                                     <Button 
                                         size="sm" 
                                         variant="ghost" 
-                                        className="text-green-500 hover:bg-green-100"
+                                        className="text-green-500 hover:bg-green-100 dark:hover:bg-green-900/50"
                                         onClick={() => handleApproval(model.id, 'Verified')}
                                         disabled={updatingId === model.id}
                                     >
-                                         {updatingId === model.id ? <Loader2 className="animate-spin"/> : <Check />}
+                                         {updatingId === model.id ? <Loader2 className="animate-spin"/> : <Check className="h-4 w-4" />}
                                     </Button>
                                 </div>
                             </CardFooter>
@@ -110,7 +110,7 @@ export default function ApprovalsPage() {
                     ))}
                 </div>
             ) : (
-                <div className="text-center text-muted-foreground py-20 bg-card rounded-lg">
+                <div className="text-center text-muted-foreground py-20 bg-card rounded-lg border">
                     <p className="text-lg font-medium">No Pending Approvals</p>
                     <p>All model verification requests have been processed.</p>
                 </div>

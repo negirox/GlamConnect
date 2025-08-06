@@ -30,7 +30,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { Model } from "@/lib/mock-data";
 import { getModelByEmail } from "@/lib/data-actions";
 import { updateModel } from "@/lib/model-actions";
-import { uploadImage, deleteImage } from "@/lib/upload-actions";
+import { deleteImage } from "@/lib/upload-actions";
+import { uploadBase64Image } from "@/lib/upload-base64-actions";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -176,6 +177,15 @@ export default function ProfileManagementPage() {
       }));
   }
 
+  const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+    });
+  };
+
   const startUpload = async () => {
     if (!model || !uploadDialog.field) return;
 
@@ -195,46 +205,44 @@ export default function ProfileManagementPage() {
     }));
     
     try {
-      const oldImagePathsToDelete: string[] = [];
-      if (isMultiple) {
-          const oldImages = model[field] as string[] | undefined;
-          if (Array.isArray(oldImages)) {
-              oldImagePathsToDelete.push(...oldImages);
-          }
-      } else {
-          const oldImage = model[field] as string | undefined;
-          if (typeof oldImage === 'string' && oldImage) {
-              oldImagePathsToDelete.push(oldImage);
-          }
-      }
-
-      if (oldImagePathsToDelete.length > 0) {
-          await Promise.all(oldImagePathsToDelete.map(img => deleteImage(img)));
-      }
+        if (isMultiple) {
+            const oldImages = model[field] as string[] | undefined;
+            if (Array.isArray(oldImages) && oldImages.length > 0) {
+                await Promise.all(oldImages.map(img => deleteImage(img)));
+            }
+        } else { // Single image upload
+           const oldImage = model[field] as string | undefined;
+           if (typeof oldImage === 'string' && oldImage) {
+               await deleteImage(oldImage);
+           }
+        }
 
       const uploadPromises = filesToUpload.map(async (uploadableFile) => {
-          setUploadDialog(prev => ({
-              ...prev,
-              files: prev.files.map(f => f.id === uploadableFile.id ? { ...f, progress: 50 } : f)
-          }));
-          const formData = new FormData();
-          formData.append('file', uploadableFile.file);
-          const result = await uploadImage(formData, MAX_FILE_SIZE_MB);
-          return { ...result, originalFileId: uploadableFile.id };
+          try {
+            setUploadDialog(prev => ({
+                ...prev,
+                files: prev.files.map(f => f.id === uploadableFile.id ? { ...f, progress: 25 } : f)
+            }));
+            const base64Data = await readFileAsBase64(uploadableFile.file);
+            setUploadDialog(prev => ({
+                ...prev,
+                files: prev.files.map(f => f.id === uploadableFile.id ? { ...f, progress: 50 } : f)
+            }));
+            const result = await uploadBase64Image(base64Data, uploadableFile.file.name, MAX_FILE_SIZE_MB);
+            return { ...result, originalFileId: uploadableFile.id };
+          } catch(error) {
+              console.error("File upload failed", error);
+              return { success: false, message: "Failed to read file.", originalFileId: uploadableFile.id, filePath: null };
+          }
       });
 
-      const results = await Promise.allSettled(uploadPromises);
+      const results = await Promise.all(uploadPromises);
 
       const newPaths: string[] = [];
       const finalFilesState = [...uploadDialog.files]; 
 
       results.forEach(result => {
-         if (result.status === 'rejected') {
-            console.error("An upload promise was rejected:", result.reason);
-            return;
-         }
-
-          const { originalFileId, success, filePath, message } = result.value;
+          const { originalFileId, success, filePath, message } = result;
           const fileIndex = finalFilesState.findIndex(f => f.id === originalFileId);
 
           if (fileIndex === -1) return;
@@ -256,15 +264,18 @@ export default function ProfileManagementPage() {
               : { [field]: newPaths[0] };
           
           await updateModel(model.id, updatePayload);
+          const fetchedModel = await getModelByEmail(model.email);
+          if (fetchedModel) {
+            setModel(fetchedModel);
+          }
 
           toast({
               title: "Upload Complete",
               description: `${newPaths.length} image(s) uploaded successfully.`,
           });
-          await fetchModel(); 
       }
       
-      const failedCount = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
+      const failedCount = results.filter(r => !r.success).length;
       if (failedCount > 0) {
            toast({
               title: "Upload Incomplete",
@@ -273,6 +284,13 @@ export default function ProfileManagementPage() {
            });
       }
 
+      // If all uploads are done (not pending or uploading), close the dialog after a delay
+      const uploadsStillInProgress = finalFilesState.some(f => f.status === 'uploading' || f.status === 'pending');
+      if (!uploadsStillInProgress) {
+        setTimeout(() => {
+          setUploadDialog({ isOpen: false, files: [], field: null, isMultiple: false });
+        }, 1000);
+      }
 
     } catch (error: any) {
         console.error("Upload process failed", error);
@@ -1135,3 +1153,5 @@ export default function ProfileManagementPage() {
     </TooltipProvider>
   );
 }
+
+    
