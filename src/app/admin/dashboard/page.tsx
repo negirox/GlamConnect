@@ -18,6 +18,8 @@ const chartConfig = {
   verifiedGigs: { label: "Verified", color: "hsl(var(--primary))" },
   pendingGigs: { label: "Pending", color: "hsl(var(--destructive))" },
   location: { label: "Models", color: "hsl(var(--chart-4))" },
+  modelStatus: { label: "Models", color: "hsl(var(--chart-5))" },
+  gigStatus: { label: "Gigs", color: "hsl(var(--chart-2))" },
 }
 
 type DashboardData = {
@@ -30,6 +32,8 @@ type DashboardData = {
     pendingGigs: number;
     locationData: { name: string; count: number }[];
     gigStatusData: { name: string; value: number; fill: string }[];
+    modelVerificationData: { name: string; count: number }[];
+    gigModerationData: { name: string; count: number }[];
 }
 
 export default function AdminDashboardPage() {
@@ -51,8 +55,11 @@ export default function AdminDashboardPage() {
             
             const verifiedGigs = gigs.filter(g => g.status === 'Verified').length;
             const pendingGigs = gigs.filter(g => g.status === 'Pending').length;
+            const rejectedGigs = gigs.filter(g => g.status === 'Rejected').length;
             
             const pendingModels = models.filter(m => m.verificationStatus === 'Pending').length;
+            const verifiedModels = models.filter(m => m.verificationStatus === 'Verified').length;
+            const notVerifiedModels = models.filter(m => m.verificationStatus === 'Not Verified').length;
             
             // Process location data
             const locationCounts: Record<string, number> = {};
@@ -71,7 +78,21 @@ export default function AdminDashboardPage() {
             const gigStatusData = [
                 { name: 'Verified', value: verifiedGigs, fill: 'hsl(var(--chart-1))' },
                 { name: 'Pending', value: pendingGigs, fill: 'hsl(var(--chart-2))' },
+                 { name: 'Rejected', value: rejectedGigs, fill: 'hsl(var(--destructive))' },
             ];
+
+            const modelVerificationData = [
+                { name: 'Pending', count: pendingModels },
+                { name: 'Verified', count: verifiedModels },
+                { name: 'Not Verified', count: notVerifiedModels },
+            ];
+
+             const gigModerationData = [
+                { name: 'Pending', count: pendingGigs },
+                { name: 'Verified', count: verifiedGigs },
+                { name: 'Rejected', count: rejectedGigs },
+            ];
+
 
             setData({
                 totalUsers: users.length,
@@ -83,6 +104,8 @@ export default function AdminDashboardPage() {
                 pendingGigs,
                 locationData,
                 gigStatusData,
+                modelVerificationData,
+                gigModerationData,
             });
             setLoading(false);
         }
@@ -182,25 +205,36 @@ export default function AdminDashboardPage() {
                       </ChartContainer>
                     </CardContent>
                 </Card>
-                 <Card className="lg:col-span-1">
+                 <Card className="lg:col-span-3">
                     <CardHeader>
-                        <CardTitle>Gig Status</CardTitle>
-                        <CardDescription>Breakdown of all submitted gigs.</CardDescription>
+                        <CardTitle>Moderation Funnels</CardTitle>
+                        <CardDescription>Status breakdown for Models and Gigs awaiting verification.</CardDescription>
                     </CardHeader>
-                    <CardContent className="h-80">
-                      <ChartContainer config={chartConfig} className="w-full h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie data={data.gigStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                                    {data.gigStatusData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                       </ChartContainer>
+                    <CardContent className="grid md:grid-cols-2 gap-8 h-80">
+                         <ChartContainer config={chartConfig} className="w-full h-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart layout="vertical" data={data.modelVerificationData} margin={{ left: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis type="number" allowDecimals={false} />
+                                    <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
+                                    <ChartLegend />
+                                    <Bar dataKey="count" name="Models" fill="hsl(var(--chart-5))" radius={4} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                         </ChartContainer>
+                          <ChartContainer config={chartConfig} className="w-full h-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart layout="vertical" data={data.gigModerationData} margin={{ left: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis type="number" allowDecimals={false}/>
+                                    <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }}/>
+                                    <ChartTooltip content={<ChartTooltipContent />} />
+                                    <ChartLegend />
+                                    <Bar dataKey="count" name="Gigs" fill="hsl(var(--chart-2))" radius={4} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                         </ChartContainer>
                     </CardContent>
                 </Card>
             </div>
