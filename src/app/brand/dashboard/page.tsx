@@ -23,11 +23,6 @@ import { createSavedList, getListsByBrandId, SavedList } from "@/lib/saved-list-
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
 
-const newListSchema = z.object({
-  name: z.string().min(1, 'List name cannot be empty.'),
-});
-
-
 export default function BrandDashboardPage() {
     const [brand, setBrand] = useState<Brand | null>(null);
     const [gigs, setGigs] = useState<GigWithApplicantCount[]>([]);
@@ -39,7 +34,6 @@ export default function BrandDashboardPage() {
     const { toast } = useToast();
     
     const fetchBrandData = async () => {
-        setLoading(true);
         const session = await getSession();
         if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
             router.push('/login');
@@ -75,7 +69,7 @@ export default function BrandDashboardPage() {
     useEffect(() => {
         fetchBrandData();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [router]);
+      }, []);
 
     const handleCreateList = async () => {
         if (!brand || !newListName.trim()) {
