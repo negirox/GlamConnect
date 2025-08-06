@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Users, Briefcase, UserCheck, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -42,6 +42,7 @@ const ClientOnlyPieChart = () => {
     }
 
     return (
+      <ChartContainer config={chartConfig} className="w-full h-full">
         <ResponsiveContainer width="100%" height="100%">
             <PieChart>
                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
@@ -53,6 +54,7 @@ const ClientOnlyPieChart = () => {
                 <ChartLegend content={<ChartLegendContent nameKey="name" />} />
             </PieChart>
         </ResponsiveContainer>
+       </ChartContainer>
     );
 };
 
@@ -112,9 +114,7 @@ export default function AdminDashboardPage() {
                         <CardDescription>A breakdown of user roles on the platform.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-80">
-                         <ChartContainer config={chartConfig} className="w-full h-full">
-                            <ClientOnlyPieChart />
-                        </ChartContainer>
+                        <ClientOnlyPieChart />
                     </CardContent>
                 </Card>
                 <Card>
@@ -123,19 +123,22 @@ export default function AdminDashboardPage() {
                         <CardDescription>Current state of gigs and model profiles.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-80">
+                      <ChartContainer config={chartConfig} className="w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={contentStatusData}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                                 <YAxis />
-                                <Tooltip content={<ChartTooltipContent />} />
+                                <ChartTooltip content={<ChartTooltipContent />} />
                                 <ChartLegend content={<ChartLegendContent />} />
                                 <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
                             </BarChart>
                         </ResponsiveContainer>
+                      </ChartContainer>
                     </CardContent>
                 </Card>
             </div>
         </div>
     );
 }
+
