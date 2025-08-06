@@ -200,7 +200,7 @@ export default function ProfileManagementPage() {
             if (Array.isArray(oldImages) && oldImages.length > 0) {
                 await Promise.all(oldImages.map(img => deleteImage(img)));
             }
-        } else if (filesToUpload.length > 0) { 
+        } else { // Single image upload
            const oldImage = model[field] as string | undefined;
            if (typeof oldImage === 'string' && oldImage) {
                await deleteImage(oldImage);
@@ -251,8 +251,8 @@ export default function ProfileManagementPage() {
               : { [field]: newPaths[0] };
           
           await updateModel(model.id, updatePayload);
-          await fetchModel(); 
-          
+          setModel(prevModel => prevModel ? { ...prevModel, ...updatePayload } : null);
+
           toast({
               title: "Upload Complete",
               description: `${newPaths.length} image(s) uploaded successfully.`,
@@ -269,8 +269,8 @@ export default function ProfileManagementPage() {
       }
 
       // If all uploads are done (not pending or uploading), close the dialog after a delay
-      const uploadsInProgress = finalFilesState.some(f => f.status === 'uploading' || f.status === 'pending');
-      if (!uploadsInProgress) {
+      const uploadsStillInProgress = finalFilesState.some(f => f.status === 'uploading' || f.status === 'pending');
+      if (!uploadsStillInProgress) {
         setTimeout(() => {
           setUploadDialog({ isOpen: false, files: [], field: null, isMultiple: false });
         }, 1000);
@@ -1137,3 +1137,5 @@ export default function ProfileManagementPage() {
     </TooltipProvider>
   );
 }
+
+    
