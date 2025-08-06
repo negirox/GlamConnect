@@ -158,6 +158,21 @@ export async function getGigById(id: string): Promise<Gig | null> {
     return allGigs.find(gig => gig.id === id) || null;
 }
 
+export async function updateGig(gigId: string, data: Partial<Gig>) {
+    const gigs = readGigs();
+    const gigIndex = gigs.findIndex(g => g.id === gigId);
+
+    if (gigIndex === -1) {
+        throw new Error('Gig not found');
+    }
+
+    gigs[gigIndex] = { ...gigs[gigIndex], ...data };
+    writeGigs(gigs);
+
+    revalidatePath('/admin/gig-approvals');
+    revalidatePath(`/gigs/${gigId}`);
+}
+
 // Application Functions
 
 function readApplications(): Application[] {
@@ -208,4 +223,26 @@ export async function applyForGig(gigId: string, modelId: string) {
 export async function getApplicantsByGigId(gigId: string): Promise<Application[]> {
     const applications = readApplications();
     return applications.filter(app => app.gigId === gigId);
+}
+
+export async function deleteGig(gigId: string): Promise<{ success: boolean }> {
+    let gigs = readGigs();
+    let applications = readApplications();
+    
+    const initialGigsLength = gigs.length;
+    gigs = gigs.filter(g => g.id !== gigId);
+
+    if (gigs.length === initialGigsLength) {
+        throw new Error('Gig not found');
+    }
+
+    applications = applications.filter(app => app.gigId !== gigId);
+    
+    writeGigs(gigs);
+    writeApplications(applications);
+    
+    revalidatePath('/brand/dashboard');
+    revalidatePath('/gigs');
+    
+    return { success: true };
 }

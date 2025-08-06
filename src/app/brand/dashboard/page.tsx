@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone, Clock, Star } from "lucide-react";
+import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone, Clock, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
@@ -12,7 +12,7 @@ import { getBrandByEmail, Brand } from "@/lib/brand-actions";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { getGigsByBrandId, Gig, getApplicantsByGigId } from "@/lib/gig-actions";
+import { getGigsByBrandId, Gig, getApplicantsByGigId, deleteGig } from "@/lib/gig-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -20,6 +20,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { createSavedList, getListsByBrandId, SavedList } from "@/lib/saved-list-actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
 
@@ -30,6 +42,7 @@ export default function BrandDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [newListName, setNewListName] = useState("");
     const [isCreatingList, setIsCreatingList] = useState(false);
+    const [isDeletingGig, setIsDeletingGig] = useState<string | null>(null);
     const router = useRouter();
     const { toast } = useToast();
     
@@ -40,6 +53,7 @@ export default function BrandDashboardPage() {
             return;
         }
 
+        setLoading(true);
         try {
             const fetchedBrand = await getBrandByEmail(session.email);
             setBrand(fetchedBrand);
@@ -87,6 +101,20 @@ export default function BrandDashboardPage() {
         } finally {
             setIsCreatingList(false);
         }
+    }
+
+    const handleDeleteGig = async (gigId: string) => {
+      setIsDeletingGig(gigId);
+      try {
+        await deleteGig(gigId);
+        toast({ title: 'Gig Deleted', description: 'The gig has been successfully removed.' });
+        fetchBrandData();
+      } catch (error) {
+        console.error(error);
+        toast({ title: 'Error', description: 'Failed to delete the gig.', variant: 'destructive' });
+      } finally {
+        setIsDeletingGig(null);
+      }
     }
       
     const statusColor: Record<Gig['status'], string> = {
@@ -181,7 +209,7 @@ export default function BrandDashboardPage() {
                         <ScrollArea className="h-60">
                             <div className="space-y-4 pr-4">
                                 {gigs.length > 0 ? gigs.map((gig, i) => (
-                                    <div key={i} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-primary/20 rounded-lg gap-3">
+                                    <div key={i} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-primary/20 rounded-lg gap-3 group">
                                         <div className="flex items-start gap-3">
                                             <span title={`Status: ${gig.status}`} className={`block h-3 w-3 rounded-full mt-1.5 shrink-0 ${statusColor[gig.status]}`}></span>
                                             <div className="overflow-hidden">
@@ -197,6 +225,25 @@ export default function BrandDashboardPage() {
                                             <Button variant="outline" size="sm" asChild>
                                                 <Link href={`/gigs/${gig.id}`}>View</Link>
                                             </Button>
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="destructive" size="icon" className="h-8 w-8">
+                                                        {isDeletingGig === gig.id ? <Loader2 className="animate-spin" /> : <Trash2 className="h-4 w-4"/>}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently delete the gig "{gig.title}".
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteGig(gig.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </div>
                                     </div>
                                 )) : (

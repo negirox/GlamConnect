@@ -22,6 +22,7 @@ import {
   LogOut,
   Loader2,
   Briefcase,
+  KeyRound,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getSession, logout } from '@/lib/auth-actions';
@@ -32,6 +33,7 @@ const adminNavLinks = [
   { href: '/admin/approvals', label: 'Portfolio Approvals', icon: BadgeCheck },
   { href: '/admin/gig-approvals', label: 'Gig Approvals', icon: Briefcase },
   { href: '/admin/users', label: 'User Management', icon: Users },
+  { href: '/admin/password-resets', label: 'Password Resets', icon: KeyRound },
 ];
 
 export default function AdminLayout({
