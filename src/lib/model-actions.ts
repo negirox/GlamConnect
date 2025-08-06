@@ -41,7 +41,7 @@ function readModels(): { headers: string[], models: Model[] } {
     if(line.trim() === '') return null;
     const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
     const entry = headers.reduce((obj, header, index) => {
-        let value = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
+        let value = values[index] ? values[index].trim().replace(/^"|"$/g, '').replace(/""/g, '"') : '';
          if ([
             'height', 'bust', 'waist', 'hips', 'shoeSize', 'weight', 
             'yearsOfExperience', 'hourlyRate', 'dayRate'
@@ -84,8 +84,8 @@ function writeModels(models: Model[]) {
                 return '';
             }
             let stringValue = String(value);
-            if (stringValue.includes(',')) {
-                return `"${stringValue}"`;
+            if (stringValue.includes(',') || stringValue.includes('"')) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
             }
             return stringValue;
         }).join(',');
