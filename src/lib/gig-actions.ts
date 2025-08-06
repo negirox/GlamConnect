@@ -209,3 +209,25 @@ export async function getApplicantsByGigId(gigId: string): Promise<Application[]
     const applications = readApplications();
     return applications.filter(app => app.gigId === gigId);
 }
+
+export async function deleteGig(gigId: string): Promise<{ success: boolean }> {
+    let gigs = readGigs();
+    let applications = readApplications();
+    
+    const initialGigsLength = gigs.length;
+    gigs = gigs.filter(g => g.id !== gigId);
+
+    if (gigs.length === initialGigsLength) {
+        throw new Error('Gig not found');
+    }
+
+    applications = applications.filter(app => app.gigId !== gigId);
+    
+    writeGigs(gigs);
+    writeApplications(applications);
+    
+    revalidatePath('/brand/dashboard');
+    revalidatePath('/gigs');
+    
+    return { success: true };
+}

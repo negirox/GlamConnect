@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertTriangle, Briefcase, MapPin, CalendarDays, Clock, Users, DollarSign, CheckCircle, XCircle, Palette, Ruler, Cake, UserCheck, Info } from 'lucide-react';
+import { Loader2, AlertTriangle, Briefcase, MapPin, CalendarDays, Clock, Users, DollarSign, CheckCircle, XCircle, Palette, Ruler, Cake, UserCheck, Info, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getSession } from '@/lib/auth-actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -167,7 +167,10 @@ export default function GigPage({ params }: GigPageProps) {
                 <CardHeader>
                     <div className="flex flex-col md:flex-row md:justify-between gap-4">
                         <div>
-                            <Badge variant="secondary" className="mb-2">{gig.projectType}</Badge>
+                             <div className="flex items-center gap-4 mb-2">
+                                <Badge variant="secondary">{gig.projectType}</Badge>
+                                {gig.status === 'Verified' && <Badge variant='default' className='bg-green-600 hover:bg-green-700 flex items-center gap-1'><ShieldCheck className='h-3 w-3'/> Verified Gig</Badge>}
+                            </div>
                             <CardTitle className="font-headline text-4xl">{gig.title}</CardTitle>
                             <CardDescription className="pt-2">Posted by {gig.brandName}</CardDescription>
                         </div>
