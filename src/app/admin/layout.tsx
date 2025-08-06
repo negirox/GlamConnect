@@ -20,6 +20,7 @@ import {
   Users,
   LogOut,
   Loader2,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getSession, logout } from '@/lib/auth-actions';
@@ -27,6 +28,7 @@ import { getSession, logout } from '@/lib/auth-actions';
 const adminNavLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/approvals', label: 'Portfolio Approvals', icon: BadgeCheck },
+  { href: '/admin/gig-approvals', label: 'Gig Approvals', icon: Briefcase },
   { href: '/admin/users', label: 'User Management', icon: Users },
 ];
 
