@@ -4,21 +4,11 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Users, Briefcase, UserCheck, Shield } from "lucide-react";
+import { Users, Briefcase, UserCheck, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-
-const userDistributionData = [
-  { name: 'Models', value: 400, fill: 'hsl(var(--chart-1))' },
-  { name: 'Brands', value: 150, fill: 'hsl(var(--chart-2))' },
-  { name: 'Admins', value: 5, fill: 'hsl(var(--chart-3))' },
-];
-
-const contentStatusData = [
-  { name: 'Verified Gigs', count: 120 },
-  { name: 'Pending Gigs', count: 15 },
-  { name: 'Verified Models', count: 350 },
-  { name: 'Pending Models', count: 50 },
-];
+import { getAllUsers } from "@/lib/user-actions";
+import { getGigs } from "@/lib/gig-actions";
+import { getModels } from "@/lib/data-actions";
 
 const chartConfig = {
   models: { label: "Models", color: "hsl(var(--chart-1))" },
@@ -30,59 +20,102 @@ const chartConfig = {
   pendingModels: { label: "Pending Models", color: "hsl(var(--destructive))" },
 }
 
-const ClientOnlyPieChart = () => {
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-
-    if (!isClient) {
-        return null;
-    }
-
-    return (
-      <ChartContainer config={chartConfig} className="w-full h-full">
-        <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                <Pie data={userDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                    {userDistributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                </Pie>
-                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-            </PieChart>
-        </ResponsiveContainer>
-       </ChartContainer>
-    );
-};
-
+type DashboardData = {
+    totalUsers: number;
+    modelCount: number;
+    brandCount: number;
+    adminCount: number;
+    openGigs: number;
+    pendingModels: number;
+    pendingGigs: number;
+    verifiedModels: number;
+    verifiedGigs: number;
+}
 
 export default function AdminDashboardPage() {
+    const [data, setData] = useState<DashboardData | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchData() {
+            setLoading(true);
+            const [users, gigs, models] = await Promise.all([
+                getAllUsers(),
+                getGigs(),
+                getModels()
+            ]);
+
+            const modelCount = users.filter(u => u.role === 'model').length;
+            const brandCount = users.filter(u => u.role === 'brand').length;
+            const adminCount = users.filter(u => u.role === 'admin').length;
+            
+            const verifiedGigs = gigs.filter(g => g.status === 'Verified').length;
+            const pendingGigs = gigs.filter(g => g.status === 'Pending').length;
+            
+            const verifiedModels = models.filter(m => m.verificationStatus === 'Verified').length;
+            const pendingModels = models.filter(m => m.verificationStatus === 'Pending').length;
+
+            setData({
+                totalUsers: users.length,
+                modelCount,
+                brandCount,
+                adminCount,
+                openGigs: verifiedGigs,
+                pendingModels,
+                pendingGigs,
+                verifiedModels,
+                verifiedGigs,
+            });
+            setLoading(false);
+        }
+
+        fetchData();
+    }, []);
+
+    const userDistributionData = data ? [
+        { name: 'Models', value: data.modelCount, fill: 'hsl(var(--chart-1))' },
+        { name: 'Brands', value: data.brandCount, fill: 'hsl(var(--chart-2))' },
+        { name: 'Admins', value: data.adminCount, fill: 'hsl(var(--chart-3))' },
+    ] : [];
+
+    const contentStatusData = data ? [
+        { name: 'Verified Gigs', count: data.verifiedGigs },
+        { name: 'Pending Gigs', count: data.pendingGigs },
+        { name: 'Verified Models', count: data.verifiedModels },
+        { name: 'Pending Models', count: data.pendingModels },
+    ] : [];
+
+    if (loading) {
+        return <div className="p-8 flex justify-center"><Loader2 className="animate-spin h-8 w-8" /></div>
+    }
+
+    if (!data) {
+        return <div className="p-8 text-center">Failed to load dashboard data.</div>
+    }
+
     return (
         <div className="p-4 md:p-8">
             <h1 className="text-3xl font-headline font-bold mb-6">Admin Dashboard</h1>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">555</div>
-                        <p className="text-xs text-muted-foreground">400 Models, 150 Brands</p>
+                        <div className="text-2xl font-bold">{data.totalUsers}</div>
+                        <p className="text-xs text-muted-foreground">{data.modelCount} Models, {data.brandCount} Brands</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Open Gigs</CardTitle>
+                        <CardTitle className="text-sm font-medium">Verified Gigs</CardTitle>
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">120</div>
-                         <p className="text-xs text-muted-foreground">+18 from last week</p>
+                        <div className="text-2xl font-bold">{data.openGigs}</div>
+                         <p className="text-xs text-muted-foreground">Live on the platform</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -91,18 +124,8 @@ export default function AdminDashboardPage() {
                         <UserCheck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">65</div>
-                        <p className="text-xs text-muted-foreground text-orange-500">50 models, 15 gigs</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Reports Pending</CardTitle>
-                        <Shield className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">3</div>
-                        <p className="text-xs text-muted-foreground text-red-500">Action required</p>
+                        <div className="text-2xl font-bold">{data.pendingModels + data.pendingGigs}</div>
+                        <p className="text-xs text-muted-foreground text-orange-500">{data.pendingModels} models, {data.pendingGigs} gigs</p>
                     </CardContent>
                 </Card>
             </div>
@@ -114,7 +137,19 @@ export default function AdminDashboardPage() {
                         <CardDescription>A breakdown of user roles on the platform.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-80">
-                        <ClientOnlyPieChart />
+                      <ChartContainer config={chartConfig} className="w-full h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                <Pie data={userDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                                    {userDistributionData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Pie>
+                                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                       </ChartContainer>
                     </CardContent>
                 </Card>
                 <Card>
@@ -127,10 +162,9 @@ export default function AdminDashboardPage() {
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={contentStatusData}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                                <XAxis dataKey="name" tick={{ fontSize: 12 }} angle={-25} textAnchor="end" height={50} />
                                 <YAxis />
                                 <ChartTooltip content={<ChartTooltipContent />} />
-                                <ChartLegend content={<ChartLegendContent />} />
                                 <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -141,4 +175,3 @@ export default function AdminDashboardPage() {
         </div>
     );
 }
-
