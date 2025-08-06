@@ -195,22 +195,17 @@ export default function ProfileManagementPage() {
     }));
     
     try {
-      const oldImagePathsToDelete: string[] = [];
-      if (isMultiple) {
-          const oldImages = model[field] as string[] | undefined;
-          if (Array.isArray(oldImages)) {
-              oldImagePathsToDelete.push(...oldImages);
-          }
-      } else {
-          const oldImage = model[field] as string | undefined;
-          if (typeof oldImage === 'string' && oldImage) {
-              oldImagePathsToDelete.push(oldImage);
-          }
-      }
-
-      if (oldImagePathsToDelete.length > 0) {
-          await Promise.all(oldImagePathsToDelete.map(img => deleteImage(img)));
-      }
+        if (isMultiple) {
+            const oldImages = model[field] as string[] | undefined;
+            if (Array.isArray(oldImages) && oldImages.length > 0) {
+                await Promise.all(oldImages.map(img => deleteImage(img)));
+            }
+        } else if (filesToUpload.length > 0) { 
+           const oldImage = model[field] as string | undefined;
+           if (typeof oldImage === 'string' && oldImage) {
+               await deleteImage(oldImage);
+           }
+        }
 
       const uploadPromises = filesToUpload.map(async (uploadableFile) => {
           setUploadDialog(prev => ({
@@ -256,12 +251,12 @@ export default function ProfileManagementPage() {
               : { [field]: newPaths[0] };
           
           await updateModel(model.id, updatePayload);
-
+          await fetchModel(); 
+          
           toast({
               title: "Upload Complete",
               description: `${newPaths.length} image(s) uploaded successfully.`,
           });
-          await fetchModel(); 
       }
       
       const failedCount = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
@@ -273,6 +268,13 @@ export default function ProfileManagementPage() {
            });
       }
 
+      // If all uploads are done (not pending or uploading), close the dialog after a delay
+      const uploadsInProgress = finalFilesState.some(f => f.status === 'uploading' || f.status === 'pending');
+      if (!uploadsInProgress) {
+        setTimeout(() => {
+          setUploadDialog({ isOpen: false, files: [], field: null, isMultiple: false });
+        }, 1000);
+      }
 
     } catch (error: any) {
         console.error("Upload process failed", error);

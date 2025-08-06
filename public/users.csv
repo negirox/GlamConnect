@@ -2,3 +2,4 @@ id,name,email,password,role,status
 1,Shilpa Rana,mukeshsingh.negi07@gmail.com,mukesh,model,active
 3,Mukesh Negi,mukeshsingh.negi070@gmail.com,mukesh,brand,active
 4,Alice Johnson,mukeshsingh.negi0700@gmail.com,mukesh,brand,active
+5,Mahira Khan,testModel@gmail.com,mukesh,model,active
