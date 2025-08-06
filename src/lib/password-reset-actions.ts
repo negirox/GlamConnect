@@ -4,19 +4,20 @@
 import fs from 'fs';
 import path from 'path';
 import { readUsers, readAdmins } from './user-actions';
+import { revalidatePath } from 'next/cache';
 
-type PasswordResetRequest = {
+export type PasswordResetRequest = {
     email: string;
     phone?: string;
     contactMethod: 'email' | 'phone';
     requestedAt: string;
-    status: 'pending' | 'completed';
+    status: 'pending' | 'completed' | 'rejected';
 };
 
 const passwordResetsCsvFilePath = path.join(process.cwd(), 'public', 'password_resets.csv');
 const RESET_HEADERS = ['email', 'phone', 'contactMethod', 'requestedAt', 'status'];
 
-function readPasswordResetRequests(): PasswordResetRequest[] {
+export function readPasswordResetRequests(): PasswordResetRequest[] {
     if (!fs.existsSync(passwordResetsCsvFilePath)) {
         fs.writeFileSync(passwordResetsCsvFilePath, RESET_HEADERS.join(',') + '\n', 'utf-8');
         return [];
@@ -32,7 +33,7 @@ function readPasswordResetRequests(): PasswordResetRequest[] {
             phone,
             contactMethod: contactMethod as 'email' | 'phone',
             requestedAt,
-            status: status as 'pending' | 'completed'
+            status: (status as 'pending' | 'completed' | 'rejected') || 'pending'
         };
     });
 }
@@ -76,4 +77,24 @@ export async function requestPasswordReset(data: { email: string; phone?: string
     // For this simulation, saving to CSV is sufficient.
     
     return { success: true };
+}
+
+export async function updatePasswordResetStatus(
+    email: string, 
+    requestedAt: string, 
+    newStatus: 'completed' | 'rejected'
+) {
+    const requests = readPasswordResetRequests();
+    const requestIndex = requests.findIndex(req => req.email === email && req.requestedAt === requestedAt);
+
+    if (requestIndex === -1) {
+        throw new Error("Password reset request not found.");
+    }
+
+    requests[requestIndex].status = newStatus;
+    writePasswordResetRequests(requests);
+
+    revalidatePath('/admin/password-resets');
+    
+    return { success: true, message: `Request status updated to ${newStatus}.` };
 }
