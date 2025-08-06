@@ -34,7 +34,7 @@ const allNavLinks: NavLinkItem[] = [
   { href: '/search', label: 'Search', icon: Search, roles: ['model', 'brand', 'guest'] },
   { href: '/gigs', label: 'Gigs', icon: Briefcase, roles: ['model', 'brand', 'guest'] },
   { href: '/recommendations', label: 'AI Recs', icon: Sparkles, roles: ['brand'] },
-  { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['model', 'brand'] },
+  { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['brand'] },
   { href: '/account/profile', label: 'My Profile', icon: User, roles: ['model'] },
   { href: '/brand/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['brand'] },
   { href: '/gigs/post', label: 'Post Gig', icon: PlusCircle, roles: ['brand'] },
