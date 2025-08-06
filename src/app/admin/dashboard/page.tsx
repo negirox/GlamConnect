@@ -3,8 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Users, Briefcase, UserCheck, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -43,15 +42,17 @@ const ClientOnlyPieChart = () => {
     }
 
     return (
-        <PieChart>
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-            <Pie data={userDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                {userDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-            </Pie>
-            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-        </PieChart>
+        <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                <Pie data={userDistributionData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                    {userDistributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                </Pie>
+                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+            </PieChart>
+        </ResponsiveContainer>
     );
 };
 
