@@ -255,106 +255,109 @@ export default function ProfileDashboardPage() {
 
   const startUpload = async () => {
     if (!model || !uploadDialog.field) return;
-
+  
     const { field, files, isMultiple } = uploadDialog;
-    
+  
     const filesToUpload = files.filter(f => f.status === 'pending');
     if (filesToUpload.length === 0) {
-        if(files.every(f => f.status === 'failed')) {
-           toast({ title: "Upload Error", description: "All selected files are invalid.", variant: "destructive" });
-        }
-        return;
-    }
-
-    setUploadDialog(prev => ({
-        ...prev,
-        files: prev.files.map(f => f.status === 'pending' ? { ...f, status: 'uploading' } : f)
-    }));
-    
-    try {
-        if (isMultiple) {
-          const oldImages = model[field] as string[] | undefined;
-          if (Array.isArray(oldImages) && oldImages.length > 0) {
-              await Promise.all(oldImages.map(img => deleteImage(img)));
-          }
-        } else if (!isMultiple && filesToUpload.length > 0) { 
-           const oldImage = model[field] as string | undefined;
-          if (typeof oldImage === 'string' && oldImage) {
-              await deleteImage(oldImage);
-          }
-        }
-
-      const uploadPromises = filesToUpload.map(async (uploadableFile) => {
-          setUploadDialog(prev => ({
-              ...prev,
-              files: prev.files.map(f => f.id === uploadableFile.id ? { ...f, progress: 50 } : f)
-          }));
-          const formData = new FormData();
-          formData.append('file', uploadableFile.file);
-          const result = await uploadImage(formData, MAX_FILE_SIZE_MB);
-          return { ...result, originalFileId: uploadableFile.id };
-      });
-
-      const results = await Promise.allSettled(uploadPromises);
-
-      let newPaths: string[] = [];
-      const finalFilesState = [...uploadDialog.files]; 
-
-      results.forEach(result => {
-         if (result.status === 'rejected') {
-            console.error("An upload promise was rejected:", result.reason);
-            return;
-         }
-
-          const { originalFileId, success, filePath, message } = result.value;
-          const fileIndex = finalFilesState.findIndex(f => f.id === originalFileId);
-
-          if (fileIndex === -1) return;
-
-          if (success && filePath) {
-              newPaths.push(filePath);
-              finalFilesState[fileIndex] = { ...finalFilesState[fileIndex], status: 'success', progress: 100 };
-          } else {
-              finalFilesState[fileIndex] = { ...finalFilesState[fileIndex], status: 'failed', error: message || 'An unknown error occurred.', progress: 0 };
-          }
-      });
-      
-      setUploadDialog(prev => ({...prev, files: finalFilesState}));
-
-      if (newPaths.length > 0) {
-          const updatePayload = isMultiple 
-              ? { [field]: newPaths }
-              : { [field]: newPaths[0] };
-          
-          await updateModel(model.id, updatePayload);
-
-          toast({
-              title: "Upload Complete",
-              description: `${newPaths.length} image(s) uploaded successfully.`,
-          });
-          await fetchModel(); 
+      if (files.every(f => f.status === 'failed')) {
+        toast({ title: "Upload Error", description: `All selected files are invalid. Max size is ${MAX_FILE_SIZE_MB}MB.`, variant: "destructive" });
       }
-      
+      return;
+    }
+  
+    setUploadDialog(prev => ({
+      ...prev,
+      files: prev.files.map(f => (f.status === 'pending' ? { ...f, status: 'uploading' } : f)),
+    }));
+  
+    try {
+      if (isMultiple) {
+        const oldImages = (model[field] as string[]) || [];
+        if (oldImages.length > 0) {
+          await Promise.all(oldImages.map(img => deleteImage(img)));
+        }
+      } else if (filesToUpload.length > 0) {
+        const oldImage = model[field] as string | undefined;
+        if (oldImage) {
+          await deleteImage(oldImage);
+        }
+      }
+  
+      const uploadPromises = filesToUpload.map(async (uploadableFile) => {
+        setUploadDialog(prev => ({
+          ...prev,
+          files: prev.files.map(f => (f.id === uploadableFile.id ? { ...f, progress: 50 } : f)),
+        }));
+        const formData = new FormData();
+        formData.append('file', uploadableFile.file);
+        const result = await uploadImage(formData, MAX_FILE_SIZE_MB);
+        return { ...result, originalFileId: uploadableFile.id };
+      });
+  
+      const results = await Promise.allSettled(uploadPromises);
+  
+      let newPaths: string[] = [];
+      const finalFilesState = [...uploadDialog.files];
+  
+      results.forEach(result => {
+        if (result.status === 'rejected') {
+          console.error("An upload promise was rejected:", result.reason);
+          return;
+        }
+  
+        const { originalFileId, success, filePath, message } = result.value;
+        const fileIndex = finalFilesState.findIndex(f => f.id === originalFileId);
+  
+        if (fileIndex === -1) return;
+  
+        if (success && filePath) {
+          newPaths.push(filePath);
+          finalFilesState[fileIndex] = { ...finalFilesState[fileIndex], status: 'success', progress: 100 };
+        } else {
+          finalFilesState[fileIndex] = { ...finalFilesState[fileIndex], status: 'failed', error: message || 'An unknown error occurred.', progress: 0 };
+        }
+      });
+  
+      setUploadDialog(prev => ({ ...prev, files: finalFilesState }));
+  
+      if (newPaths.length > 0) {
+        const updatePayload = isMultiple ? { [field]: newPaths } : { [field]: newPaths[0] };
+        await updateModel(model.id, updatePayload);
+        setModel(prevModel => (prevModel ? { ...prevModel, ...updatePayload } : null));
+        toast({
+          title: "Upload Complete",
+          description: `${newPaths.length} image(s) uploaded successfully.`,
+        });
+      }
+  
       const failedCount = results.filter(r => r.status === 'fulfilled' && !r.value.success).length;
       if (failedCount > 0) {
-           toast({
-              title: "Upload Incomplete",
-              description: `${failedCount} image(s) failed to upload.`,
-              variant: 'destructive'
-           });
-      }
-
-    } catch (error: any) {
-        console.error("Upload process failed", error);
         toast({
-            title: "Upload Process Failed",
-            description: error.message || "An unexpected error occurred during the upload process.",
-            variant: "destructive",
+          title: "Upload Incomplete",
+          description: `${failedCount} image(s) failed to upload.`,
+          variant: 'destructive',
         });
-        setUploadDialog(prev => ({
-            ...prev,
-            files: prev.files.map(f => f.status === 'uploading' ? { ...f, status: 'failed', error: 'Process failed' } : f)
-        }));
+      }
+  
+      const uploadsStillInProgress = finalFilesState.some(f => ['uploading', 'pending'].includes(f.status));
+      if (!uploadsStillInProgress) {
+        setTimeout(() => {
+          setUploadDialog({ isOpen: false, files: [], field: null, isMultiple: false });
+        }, 1000);
+      }
+  
+    } catch (error: any) {
+      console.error("Upload process failed", error);
+      toast({
+        title: "Upload Process Failed",
+        description: error.message || "An unexpected error occurred during the upload process.",
+        variant: "destructive",
+      });
+      setUploadDialog(prev => ({
+        ...prev,
+        files: prev.files.map(f => (f.status === 'uploading' ? { ...f, status: 'failed', error: 'Process failed' } : f)),
+      }));
     }
   }
 
@@ -426,9 +429,9 @@ export default function ProfileDashboardPage() {
     <Dialog open={uploadDialog.isOpen} onOpenChange={(isOpen) => !uploadInProgress && !isOpen && setUploadDialog(prev => ({...prev, isOpen: false}))}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload Portfolio Images</DialogTitle>
+          <DialogTitle>Upload Images</DialogTitle>
           <DialogDescription>
-            Review your files before uploading. New images will replace all existing ones. Files over {MAX_FILE_SIZE_MB}MB will be ignored.
+            Review your files before uploading. New images will replace existing ones. Files over {MAX_FILE_SIZE_MB}MB will be ignored.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
@@ -466,26 +469,32 @@ export default function ProfileDashboardPage() {
 
     <div className="container mx-auto max-w-5xl px-4 md:px-6 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
-        <div className="flex items-center">
-          <div className="relative h-24 w-24 rounded-full mr-6">
-            <Image
-              src={model.profilePicture}
-              alt={model.name}
-              data-ai-hint="fashion model"
-              fill
-              className="rounded-full object-cover"
-            />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-                <h1 className="text-4xl font-headline font-bold">{model.name}</h1>
-                {getVerificationBadge()}
+        <div className="flex items-center gap-6">
+            <div className="relative h-24 w-24 rounded-full group">
+                <Image
+                src={model.profilePicture}
+                alt={model.name}
+                data-ai-hint="fashion model"
+                fill
+                className="rounded-full object-cover"
+                />
+                 <Button asChild variant="outline" size="icon" className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Label>
+                        <Edit className="h-4 w-4"/>
+                        <Input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileSelect(e, 'profilePicture', false)} />
+                    </Label>
+                </Button>
             </div>
-            <div className="flex items-center text-muted-foreground mt-2">
-                <MapPin className="h-4 w-4 mr-1.5" />
-                <span>{model.location}</span>
+            <div>
+                <div className="flex items-center gap-2">
+                    <h1 className="text-4xl font-headline font-bold">{model.name}</h1>
+                    {getVerificationBadge()}
+                </div>
+                <div className="flex items-center text-muted-foreground mt-2">
+                    <MapPin className="h-4 w-4 mr-1.5" />
+                    <span>{model.location}</span>
+                </div>
             </div>
-          </div>
         </div>
         <Button asChild size="lg">
           <Link href="/account/profile/edit">
@@ -818,5 +827,3 @@ export default function ProfileDashboardPage() {
     </TooltipProvider>
   );
 }
-
-    
