@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, Check } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { Button } from "@/components/ui/button"
@@ -10,25 +10,38 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 export function ThemeSwitcher() {
-  const { setTheme, theme, themes } = useTheme()
+  const { setTheme, theme } = useTheme()
 
   const themeColors = [
-    { name: 'Rose', color: 'bg-rose-500' },
-    { name: 'Blue', color: 'bg-blue-500' },
-    { name: 'Orange', color: 'bg-orange-500' },
-    { name: 'Zinc', color: 'bg-zinc-500' },
+    { name: 'Zinc', class: 'theme-zinc' },
+    { name: 'Rose', class: 'theme-rose' },
+    { name: 'Blue', class: 'theme-blue' },
+    { name: 'Orange', class: 'theme-orange' },
   ];
+
+  const fonts = [
+    { name: 'Default', value: 'default-font' },
+    { name: 'Inter/Lora', value: 'inter-lora' },
+  ]
+  
+  const handleFontChange = (font: string) => {
+    document.documentElement.setAttribute('data-font', font);
+    localStorage.setItem('font', font);
+  }
+
+  React.useEffect(() => {
+    const savedFont = localStorage.getItem('font');
+    if (savedFont) {
+        document.documentElement.setAttribute('data-font', savedFont);
+    }
+  }, [])
 
   return (
     <DropdownMenu>
@@ -52,16 +65,21 @@ export function ThemeSwitcher() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Color</DropdownMenuLabel>
-         {themeColors.map(({ name, color }) => (
+         {themeColors.map(({ name, class: themeClass }) => (
             <DropdownMenuItem
                 key={name}
                 onClick={() => setTheme(name.toLowerCase())}
-                className={cn(
-                    "flex items-center gap-2",
-                    theme === name.toLowerCase() && "font-semibold"
-                )}
                 >
-                <div className={cn("h-3 w-3 rounded-full", color)} />
+                <span>{name}</span>
+            </DropdownMenuItem>
+        ))}
+         <DropdownMenuSeparator />
+        <DropdownMenuLabel>Font</DropdownMenuLabel>
+         {fonts.map(({ name, value }) => (
+            <DropdownMenuItem
+                key={name}
+                onClick={() => handleFontChange(value)}
+                >
                 <span>{name}</span>
             </DropdownMenuItem>
         ))}
