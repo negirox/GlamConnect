@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ModelCard } from '@/components/model-card';
 import { getModels } from '@/lib/data-actions';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 export default async function Home() {
   const models = await getModels();
@@ -11,21 +11,21 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col items-center">
-      <section className="w-full py-20 md:py-32 lg:py-40 bg-card">
+      <section className="w-full py-20 md:py-32 lg:py-40 bg-card/50">
         <div className="container mx-auto px-4 md:px-6 text-center">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold tracking-tighter mb-4">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold tracking-tighter mb-4 animate-fade-in-up">
             Where Creativity Connects.
           </h1>
-          <p className="max-w-[700px] mx-auto text-lg md:text-xl text-muted-foreground mb-8">
+          <p className="max-w-[700px] mx-auto text-lg md:text-xl text-muted-foreground mb-8 animate-fade-in-up animation-delay-300">
             GlamConnect is the exclusive platform for brands to discover and collaborate with professional models. Find the perfect face for your next campaign.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-secondary hover:bg-accent">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up animation-delay-600">
+            <Button asChild size="lg" className="shadow-lg hover:shadow-primary/50 transition-shadow">
               <Link href="/search">
                 Find Models <ArrowRight className="ml-2" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
+            <Button asChild size="lg" variant="secondary">
               <Link href="/signup">Join as a Model</Link>
             </Button>
           </div>
@@ -34,7 +34,8 @@ export default async function Home() {
 
       <section className="w-full py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl md:text-4xl font-headline font-bold text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-headline font-bold text-center mb-12 flex items-center justify-center gap-3">
+            <Sparkles className="text-primary"/>
             Featured Models
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
