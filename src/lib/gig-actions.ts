@@ -58,7 +58,7 @@ export type Gig = {
     status: 'Pending' | 'Verified' | 'Rejected';
 }
 
-export const APPLICATION_STATUSES = ['Applied', 'L1 Approved', 'L2 Approved', 'Director Approved', 'Selected', 'Rejected'] as const;
+const APPLICATION_STATUSES = ['Applied', 'L1 Approved', 'L2 Approved', 'Director Approved', 'Selected', 'Rejected'] as const;
 export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
 
 export type Application = {

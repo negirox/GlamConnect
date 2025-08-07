@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Model } from '@/lib/mock-data';
-import { Application, Gig, getGigById, getApplicantsByGigId, updateApplicationStatus, APPLICATION_STATUSES } from '@/lib/gig-actions';
+import { Application, Gig, getGigById, getApplicantsByGigId, updateApplicationStatus, ApplicationStatus } from '@/lib/gig-actions';
 import { getModelById } from '@/lib/data-actions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,6 +27,8 @@ interface ApplicantManagementModalProps {
 type ApplicantWithModel = Application & {
     model?: Model;
 }
+
+const APPLICATION_STATUSES: ApplicationStatus[] = ['Applied', 'L1 Approved', 'L2 Approved', 'Director Approved', 'Selected', 'Rejected'];
 
 export function ApplicantManagementModal({ gigId, isOpen, onClose, onUpdate }: ApplicantManagementModalProps) {
     const [gig, setGig] = useState<Gig | null>(null);
@@ -72,7 +74,7 @@ export function ApplicantManagementModal({ gigId, isOpen, onClose, onUpdate }: A
     }
     
     const statusCounts = useMemo(() => {
-        const counts = { All: applicants.length };
+        const counts: Record<string, number> = { All: applicants.length };
         APPLICATION_STATUSES.forEach(status => {
             counts[status] = applicants.filter(a => a.status === status).length;
         });
