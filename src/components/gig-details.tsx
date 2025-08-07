@@ -16,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Model } from '@/lib/mock-data';
-import { getModelById } from './data-actions';
+import { getModelById } from '@/lib/data-actions';
 import Image from 'next/image';
 import { ProfileDetails } from './profile-details';
 
@@ -311,3 +311,5 @@ export function GigDetails({ gigId }: GigDetailsProps) {
         </div>
     );
 }
+
+    
