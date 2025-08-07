@@ -26,6 +26,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
     const [isApplying, setIsApplying] = useState(false);
     const [hasApplied, setHasApplied] = useState(false);
     const [hasConsented, setHasConsented] = useState(false);
+    const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -65,6 +66,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
                 title: 'Application Sent!',
                 description: 'The brand has received your application.',
             });
+            setIsApplyDialogOpen(false); // Close the dialog on success
         } catch (error: any) {
             toast({
                 title: 'Error',
@@ -158,7 +160,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
                     </div>
                     <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
                        {session?.role === 'model' && (
-                        <Dialog>
+                        <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button size="lg" disabled={gig.status !== 'Verified' || hasApplied}>
                                     <Briefcase className="mr-2"/> {hasApplied ? 'Already Applied' : 'Apply Now'}
@@ -176,7 +178,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
                                     <Label htmlFor="terms">I understand and consent to sharing my profile.</Label>
                                 </div>
                                 <DialogFooter>
-                                    <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
+                                    <Button variant="ghost" onClick={() => setIsApplyDialogOpen(false)}>Cancel</Button>
                                     <Button onClick={handleApply} disabled={isApplying || !hasConsented}>
                                         {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                         Submit Application
