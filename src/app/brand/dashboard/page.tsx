@@ -55,14 +55,14 @@ export default function BrandDashboardPage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    const fetchBrandData = async () => {
+    const fetchBrandData = async (showLoading = true) => {
         const session = await getSession();
         if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
             router.push('/login');
             return;
         }
 
-        setLoading(true);
+        if(showLoading) setLoading(true);
         try {
             const fetchedBrand = await getBrandByEmail(session.email);
             setBrand(fetchedBrand);
@@ -87,7 +87,7 @@ export default function BrandDashboardPage() {
             console.error("Failed to fetch brand data:", error);
             setBrand(null);
         } finally {
-            setLoading(false);
+            if(showLoading) setLoading(false);
         }
     }
 
@@ -106,7 +106,7 @@ export default function BrandDashboardPage() {
             await createSavedList(brand.id, newListName);
             toast({ title: "Success", description: "New list created." });
             setNewListName("");
-            await fetchBrandData(); // Re-fetch data to update list
+            await fetchBrandData(false); // Re-fetch data to update list
         } catch(error) {
             toast({ title: "Error", description: "Failed to create list.", variant: "destructive" });
         } finally {
@@ -121,7 +121,7 @@ export default function BrandDashboardPage() {
             toast({ title: 'List Deleted', description: `The list "${selectedList.name}" has been deleted.` });
             setIsListModalOpen(false);
             setSelectedList(null);
-            fetchBrandData();
+            fetchBrandData(false);
         } catch (error) {
              toast({ title: "Error", description: "Failed to delete list.", variant: "destructive" });
         }
@@ -132,7 +132,7 @@ export default function BrandDashboardPage() {
       try {
         await deleteGig(gigId);
         toast({ title: 'Gig Deleted', description: 'The gig has been successfully removed.' });
-        fetchBrandData();
+        fetchBrandData(false);
       } catch (error) {
         console.error(error);
         toast({ title: 'Error', description: 'Failed to delete the gig.', variant: 'destructive' });
@@ -153,10 +153,10 @@ export default function BrandDashboardPage() {
     const handleRemoveModelFromList = async (modelId: string) => {
         if (!selectedList) return;
         try {
-            await removeModelFromList(selectedList.id, modelId);
+            const updatedList = await removeModelFromList(selectedList.id, modelId);
             setSelectedListModels(prev => prev.filter(m => m.id !== modelId));
-            const updatedLists = savedLists.map(l => l.id === selectedList.id ? {...l, modelIds: l.modelIds.filter(id => id !== modelId)} : l);
-            setSavedLists(updatedLists);
+            setSavedLists(prev => prev.map(l => l.id === updatedList.id ? updatedList : l));
+            setSelectedList(updatedList);
             toast({ title: "Model Removed" });
         } catch (error) {
             toast({ title: "Error removing model", variant: "destructive" });
@@ -172,16 +172,23 @@ export default function BrandDashboardPage() {
     };
 
     const handleAddModelsToList = async () => {
-        if (!selectedList) return;
+        if (!selectedList || selectedModelsForAdding.length === 0) return;
         try {
-            await addModelsToList(selectedList.id, selectedModelsForAdding);
-            toast({ title: "List Updated" });
-            setIsAddModelsView(false);
-            const listToUpdate = savedLists.find(l => l.id === selectedList.id);
-            if(listToUpdate) {
-                handleOpenListModal({...listToUpdate, modelIds: selectedModelsForAdding});
-            }
+            const updatedList = await addModelsToList(selectedList.id, selectedModelsForAdding);
+            
+            // Update local state to immediately reflect changes
+            setSavedLists(prev => prev.map(l => l.id === updatedList.id ? updatedList : l));
+            
+            // Re-fetch model details for the updated list
+            const modelPromises = updatedList.modelIds.map(id => getModelById(id));
+            const resolvedModels = (await Promise.all(modelPromises)).filter(Boolean) as Model[];
+            
+            // Update state for the modal view
+            setSelectedList(updatedList);
+            setSelectedListModels(resolvedModels);
 
+            toast({ title: "List Updated" });
+            setIsAddModelsView(false); // Return to the list view
         } catch (error) {
              toast({ title: "Error updating list", variant: "destructive" });
         }
@@ -235,15 +242,16 @@ export default function BrandDashboardPage() {
                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {allModels.map(model => {
                             const isSelected = selectedModelsForAdding.includes(model.id);
+                            const alreadyInList = selectedList?.modelIds.includes(model.id);
                             return (
                                 <Card 
                                     key={model.id} 
-                                    onClick={() => handleToggleModelSelection(model.id)}
-                                    className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-2 hover:ring-primary/50'}`}
+                                    onClick={() => !alreadyInList && handleToggleModelSelection(model.id)}
+                                    className={`cursor-pointer transition-all ${alreadyInList ? 'opacity-50 cursor-not-allowed' : ''} ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-2 hover:ring-primary/50'}`}
                                 >
                                     <CardHeader className="p-0 relative">
                                         <Image src={model.profilePicture} alt={model.name} width={300} height={400} className="rounded-t-lg object-cover aspect-[3/4]" />
-                                        {isSelected && (
+                                        {(isSelected || alreadyInList) && (
                                             <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
                                                 <CheckCircle className="h-5 w-5"/>
                                             </div>
@@ -281,7 +289,7 @@ export default function BrandDashboardPage() {
                 {isAddModelsView ? (
                     <>
                         <Button variant="ghost" onClick={() => setIsAddModelsView(false)}>Cancel</Button>
-                        <Button onClick={handleAddModelsToList}>Save Changes</Button>
+                        <Button onClick={handleAddModelsToList}>Add Selected Models</Button>
                     </>
                 ) : (
                     <>
@@ -302,7 +310,7 @@ export default function BrandDashboardPage() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <Button variant="outline" onClick={() => { setSelectedModelsForAdding(selectedList?.modelIds || []); setIsAddModelsView(true); }}>Add Models</Button>
+                    <Button variant="outline" onClick={() => { setSelectedModelsForAdding([]); setIsAddModelsView(true); }}>Add Models</Button>
                     <DialogClose asChild><Button>Done</Button></DialogClose>
                     </>
                 )}
@@ -392,9 +400,14 @@ export default function BrandDashboardPage() {
                                         </div>
                                         <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                                             <Badge variant="secondary">{gig.applicantCount} Applicants</Badge>
-                                            <Button variant="outline" size="sm" asChild>
-                                                <Link href={`/gigs/${gig.id}`}>View</Link>
-                                            </Button>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                     <Button variant="outline" size="sm">View</Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                                                    <GigDetails gigId={gig.id} />
+                                                </DialogContent>
+                                            </Dialog>
                                              <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="destructive" size="icon" className="h-8 w-8">
