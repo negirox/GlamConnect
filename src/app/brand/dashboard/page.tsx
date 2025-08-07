@@ -34,7 +34,7 @@ import {
 import { getModels, Model } from "@/lib/data-actions";
 import { GigDetails } from "@/components/gig-details";
 import { ListManagementModal } from "@/components/list-management-modal";
-
+import { ApplicantManagementModal } from "@/components/applicant-management-modal";
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
 
@@ -44,6 +44,7 @@ export default function BrandDashboardPage() {
     const [savedLists, setSavedLists] = useState<SavedList[]>([]);
     const [allModels, setAllModels] = useState<Model[]>([]);
     const [selectedList, setSelectedList] = useState<SavedList | null>(null);
+    const [selectedGigId, setSelectedGigId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [newListName, setNewListName] = useState("");
     const [isCreatingList, setIsCreatingList] = useState(false);
@@ -162,6 +163,16 @@ export default function BrandDashboardPage() {
                     onListUpdate={() => fetchBrandData(false)}
                  />
             )}
+            
+            {selectedGigId && (
+                <ApplicantManagementModal
+                    gigId={selectedGigId}
+                    isOpen={!!selectedGigId}
+                    onClose={() => setSelectedGigId(null)}
+                    onUpdate={() => fetchBrandData(false)}
+                />
+            )}
+
 
             <div className="space-y-2 mb-8">
                 <h1 className="text-4xl font-headline font-bold">Welcome, {brand.name}</h1>
@@ -239,14 +250,7 @@ export default function BrandDashboardPage() {
                                         </div>
                                         <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                                             <Badge variant="secondary">{gig.applicantCount} Applicants</Badge>
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                     <Button variant="outline" size="sm">View</Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="max-w-4xl h-[90vh] p-0">
-                                                    <GigDetails gigId={gig.id} />
-                                                </DialogContent>
-                                            </Dialog>
+                                            <Button variant="outline" size="sm" onClick={() => setSelectedGigId(gig.id)}>Manage</Button>
                                              <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="destructive" size="icon" className="h-8 w-8">

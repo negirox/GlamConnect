@@ -38,6 +38,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Application, Gig, getApplicationsByModelId, getGigById } from '@/lib/gig-actions';
+import { GigDetails } from '@/components/gig-details';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const MAX_FILE_SIZE_MB = 2;
@@ -57,6 +60,10 @@ type UploadDialogState = {
     field: keyof Model | null;
     isMultiple: boolean;
 }
+
+type ApplicationWithGig = Application & {
+    gig?: Gig;
+};
 
 const profileSchema = z.object({
     name: z.string().min(1, 'Full Name is required'),
@@ -104,6 +111,7 @@ const ratesSchema = z.object({
 
 export default function ProfileDashboardPage() {
   const [model, setModel] = useState<Model | null>(null);
+  const [applications, setApplications] = useState<ApplicationWithGig[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -112,7 +120,7 @@ export default function ProfileDashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const fetchModel = async () => {
+  const fetchModelData = async () => {
     const session = await getSession();
     if (!session.isLoggedIn || !session.email) {
       router.push('/login');
@@ -122,6 +130,18 @@ export default function ProfileDashboardPage() {
       if(!editingSection) setLoading(true); // Only show main loader if not editing
       const fetchedModel = await getModelByEmail(session.email);
       setModel(fetchedModel || null);
+
+      if (fetchedModel) {
+        const fetchedApplications = await getApplicationsByModelId(fetchedModel.id);
+        const appsWithGigs = await Promise.all(
+            fetchedApplications.map(async (app) => {
+                const gig = await getGigById(app.gigId);
+                return { ...app, gig };
+            })
+        );
+        setApplications(appsWithGigs.filter(app => app.gig));
+      }
+
     } catch (error) {
       console.error(error);
       setModel(null);
@@ -131,7 +151,7 @@ export default function ProfileDashboardPage() {
   };
 
   useEffect(() => {
-    fetchModel();
+    fetchModelData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -149,7 +169,7 @@ export default function ProfileDashboardPage() {
 
     try {
       await updateModel(model.id, data);
-      await fetchModel(); 
+      await fetchModelData(); 
       toast({
         title: "Profile Updated",
         description: `Your ${section} information has been saved.`,
@@ -423,6 +443,18 @@ export default function ProfileDashboardPage() {
   const uploadInProgress = uploadDialog.files.some(f => f.status === 'uploading');
   const allUploadsFinished = !uploadInProgress && uploadDialog.files.some(f => f.status === 'success' || f.status === 'failed');
   const hasPendingFiles = uploadDialog.files.some(f => f.status === 'pending');
+
+  const getStatusColor = (status: Application['status']) => {
+    switch(status) {
+        case 'Selected': return 'bg-green-500';
+        case 'Rejected': return 'bg-red-500';
+        case 'L1 Approved':
+        case 'L2 Approved':
+        case 'Director Approved': return 'bg-blue-500';
+        default: return 'bg-yellow-500';
+    }
+  }
+
 
   return (
     <TooltipProvider>
@@ -779,50 +811,85 @@ export default function ProfileDashboardPage() {
       </div>
 
        <Separator className="my-8" />
-       
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-headline font-bold">Portfolio</h2>
-                <Button asChild variant="outline">
-                    <Label>
-                        <Upload className="mr-2 h-4 w-4" /> Edit Portfolio
-                         <Input 
-                            type="file" 
-                            className="hidden" 
-                            multiple 
-                            accept="image/*"
-                            onChange={e => handleFileSelect(e, 'portfolioImages', true)}
+
+        <div className="grid md:grid-cols-2 gap-8">
+            <div>
+                <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">My Applications</CardTitle>
+                    <CardDescription>Track the status of your submitted applications.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-96">
+                        <div className="space-y-4 pr-4">
+                            {applications.length > 0 ? applications.map(app => (
+                                <div key={app.id} className="p-3 border rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <Dialog>
+                                            <DialogTrigger asChild>
+                                                <p className="font-semibold hover:underline cursor-pointer">{app.gig?.title}</p>
+                                            </DialogTrigger>
+                                            <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col">
+                                                <GigDetails gigId={app.gigId} />
+                                            </DialogContent>
+                                        </Dialog>
+                                        <p className="text-sm text-muted-foreground">Applied on: {new Date(app.appliedDate).toLocaleDateString()}</p>
+                                    </div>
+                                    <Badge className={`${getStatusColor(app.status)}`}>{app.status}</Badge>
+                                </div>
+                            )) : (
+                                <p className="text-muted-foreground text-center pt-10">You have not applied to any gigs yet.</p>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </CardContent>
+                </Card>
+            </div>
+            
+            <div>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-3xl font-headline font-bold">Portfolio</h2>
+                    <Button asChild variant="outline">
+                        <Label>
+                            <Upload className="mr-2 h-4 w-4" /> Edit Portfolio
+                            <Input 
+                                type="file" 
+                                className="hidden" 
+                                multiple 
+                                accept="image/*"
+                                onChange={e => handleFileSelect(e, 'portfolioImages', true)}
+                            />
+                        </Label>
+                    </Button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {model.portfolioImages.map((src, index) => (
+                    <Dialog key={index}>
+                    <DialogTrigger asChild>
+                        <div className="relative aspect-[3/4] w-full group overflow-hidden rounded-lg cursor-pointer">
+                        <Image
+                            src={src}
+                            alt={`Portfolio image ${index + 1} for ${model.name}`}
+                            data-ai-hint="portfolio shot"
+                            fill
+                            className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
                         />
-                    </Label>
-                </Button>
+                        </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                        <Image
+                            src={src}
+                            alt={`Portfolio image ${index + 1} for ${model.name}`}
+                            width={800}
+                            height={1067}
+                            className="object-contain rounded-lg"
+                        />
+                    </DialogContent>
+                    </Dialog>
+                ))}
+                </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {model.portfolioImages.map((src, index) => (
-                <Dialog key={index}>
-                  <DialogTrigger asChild>
-                    <div className="relative aspect-[3/4] w-full group overflow-hidden rounded-lg cursor-pointer">
-                      <Image
-                        src={src}
-                        alt={`Portfolio image ${index + 1} for ${model.name}`}
-                        data-ai-hint="portfolio shot"
-                        fill
-                        className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
-                      />
-                    </div>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                     <Image
-                        src={src}
-                        alt={`Portfolio image ${index + 1} for ${model.name}`}
-                        width={800}
-                        height={1067}
-                        className="object-contain rounded-lg"
-                      />
-                  </DialogContent>
-                </Dialog>
-              ))}
-            </div>
-          </div>
+      </div>
     </div>
     </TooltipProvider>
   );

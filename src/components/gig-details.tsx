@@ -2,23 +2,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getGigById, Gig, applyForGig, getApplicantsByGigId } from '@/lib/gig-actions';
+import { getGigById, Gig, applyForGig, getApplicantsByGigId, Application } from '@/lib/gig-actions';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Briefcase, MapPin, CalendarDays, Clock, Users, DollarSign, CheckCircle, XCircle, Palette, Ruler, Cake, UserCheck, Info, ShieldCheck } from 'lucide-react';
 import { getSession } from '@/lib/auth-actions';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Model } from '@/lib/mock-data';
+import { getModelById } from '@/lib/data-actions';
+import Image from 'next/image';
+import { ProfileDetails } from './profile-details';
 
 type GigDetailsProps = {
   gigId: string;
 };
+
+type ApplicantWithModel = Application & {
+    model?: Model;
+}
 
 export function GigDetails({ gigId }: GigDetailsProps) {
     const [gig, setGig] = useState<Gig | null>(null);
@@ -28,6 +36,8 @@ export function GigDetails({ gigId }: GigDetailsProps) {
     const [hasApplied, setHasApplied] = useState(false);
     const [hasConsented, setHasConsented] = useState(false);
     const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
+    const [applicants, setApplicants] = useState<ApplicantWithModel[]>([]);
+
     const { toast } = useToast();
 
     useEffect(() => {
@@ -40,11 +50,22 @@ export function GigDetails({ gigId }: GigDetailsProps) {
             setGig(fetchedGig);
             setSession(sessionData);
 
-            if (fetchedGig && sessionData.isLoggedIn && sessionData.role === 'model') {
-                const applicants = await getApplicantsByGigId(fetchedGig.id);
-                if(applicants.some(app => app.modelId === sessionData.id)) {
-                    setHasApplied(true);
+            if (fetchedGig) {
+                 const fetchedApplicants = await getApplicantsByGigId(fetchedGig.id);
+                if (sessionData.isLoggedIn && sessionData.role === 'model') {
+                    if(fetchedApplicants.some(app => app.modelId === sessionData.id)) {
+                        setHasApplied(true);
+                    }
                 }
+                 if(sessionData.isLoggedIn && sessionData.role === 'brand') {
+                    const applicantsWithDetails = await Promise.all(
+                        fetchedApplicants.map(async (app) => {
+                            const model = await getModelById(app.modelId);
+                            return { ...app, model };
+                        })
+                    );
+                    setApplicants(applicantsWithDetails.filter(a => a.model));
+                 }
             }
 
             setLoading(false);
@@ -52,6 +73,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
         if (gigId) {
             fetchData(gigId);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gigId]);
     
     const handleApply = async () => {
@@ -145,9 +167,11 @@ export function GigDetails({ gigId }: GigDetailsProps) {
             <span>{label}</span>
         </div>
     )
+    
+    const defaultTab = session?.role === 'brand' ? 'applicants' : 'details';
 
     return (
-        <>
+        <div className="flex flex-col h-full">
             <div className="p-6 border-b shrink-0">
                  <GigStatusAlert status={gig.status} />
                 <div className="flex flex-col md:flex-row md:justify-between gap-4">
@@ -196,54 +220,95 @@ export function GigDetails({ gigId }: GigDetailsProps) {
                 </div>
             </div>
 
-            <ScrollArea className="flex-1">
-                 <div className="p-6">
-                    <p className="text-muted-foreground mb-8">{gig.description}</p>
-                    
-                    <Separator className="my-6" />
-
-                    <div className="grid md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                            <h3 className="font-headline text-xl font-semibold">Project Details</h3>
-                            <InfoItem icon={MapPin} label="Location" value={gig.location} />
-                            <InfoItem icon={CalendarDays} label="Shoot Date & Time" value={`${new Date(gig.date).toLocaleDateString()} at ${gig.timing}`} />
-                            <InfoItem icon={Users} label="Models Needed" value={`${gig.modelsNeeded} (${gig.isGroupShoot ? 'Group shoot' : 'Solo shoot'})`} />
-                            <InfoItem icon={DollarSign} label="Compensation" value={formatBudget(gig)} />
-                        </div>
-                         <div className="space-y-6">
-                            <h3 className="font-headline text-xl font-semibold">Model Requirements</h3>
-                             <InfoItem icon={UserCheck} label="Gender Preference" value={gig.genderPreference} />
-                             {(gig.ageRangeMin && gig.ageRangeMax) && <InfoItem icon={Cake} label="Age Range" value={`${gig.ageRangeMin} - ${gig.ageRangeMax} years`} />}
-                             {(gig.heightRangeMin && gig.heightRangeMax) && <InfoItem icon={Ruler} label="Height Range" value={`${gig.heightRangeMin} - ${gig.heightRangeMax} cm`} />}
-                             {gig.experienceLevel && <InfoItem icon={Briefcase} label="Experience Level" value={gig.experienceLevel} />}
-                        </div>
-                    </div>
-                    
-                    <Separator className="my-6" />
-
-                     <div className="space-y-6">
-                        <h3 className="font-headline text-xl font-semibold">Logistics & Extras</h3>
-                        <div className="grid md:grid-cols-2 gap-4 text-muted-foreground">
-                            <BooleanItem label="Travel provided" value={gig.travelProvided} />
-                            <BooleanItem label="Accommodation provided" value={gig.accommodationProvided} />
-                            <BooleanItem label="Portfolio link required" value={gig.portfolioLinkRequired} />
-                        </div>
-                     </div>
-
-                    {gig.consentRequired && gig.consentRequired.length > 0 && (
-                        <>
+            <Tabs defaultValue={defaultTab} className="flex-grow flex flex-col">
+                 {session?.role === 'brand' && (
+                    <TabsList className="shrink-0 mx-6 mt-4">
+                        <TabsTrigger value="details">Gig Details</TabsTrigger>
+                        <TabsTrigger value="applicants">Applicants ({applicants.length})</TabsTrigger>
+                    </TabsList>
+                 )}
+                <ScrollArea className="flex-1">
+                    <TabsContent value="details" className="p-6">
+                        <p className="text-muted-foreground mb-8">{gig.description}</p>
+                        
                         <Separator className="my-6" />
-                        <div>
-                             <h3 className="font-headline text-xl font-semibold mb-3">Required Consents</h3>
-                             <div className="flex flex-wrap gap-2">
-                                {gig.consentRequired.map(consent => <Badge key={consent} variant="destructive">{consent}</Badge>)}
+
+                        <div className="grid md:grid-cols-2 gap-8">
+                            <div className="space-y-6">
+                                <h3 className="font-headline text-xl font-semibold">Project Details</h3>
+                                <InfoItem icon={MapPin} label="Location" value={gig.location} />
+                                <InfoItem icon={CalendarDays} label="Shoot Date & Time" value={`${new Date(gig.date).toLocaleDateString()} at ${gig.timing}`} />
+                                <InfoItem icon={Users} label="Models Needed" value={`${gig.modelsNeeded} (${gig.isGroupShoot ? 'Group shoot' : 'Solo shoot'})`} />
+                                <InfoItem icon={DollarSign} label="Compensation" value={formatBudget(gig)} />
+                            </div>
+                             <div className="space-y-6">
+                                <h3 className="font-headline text-xl font-semibold">Model Requirements</h3>
+                                 <InfoItem icon={UserCheck} label="Gender Preference" value={gig.genderPreference} />
+                                 {(gig.ageRangeMin && gig.ageRangeMax) && <InfoItem icon={Cake} label="Age Range" value={`${gig.ageRangeMin} - ${gig.ageRangeMax} years`} />}
+                                 {(gig.heightRangeMin && gig.heightRangeMax) && <InfoItem icon={Ruler} label="Height Range" value={`${gig.heightRangeMin} - ${gig.heightRangeMax} cm`} />}
+                                 {gig.experienceLevel && <InfoItem icon={Briefcase} label="Experience Level" value={gig.experienceLevel} />}
                             </div>
                         </div>
-                        </>
-                    )}
-                 </div>
-            </ScrollArea>
-        </>
+                        
+                        <Separator className="my-6" />
+
+                         <div className="space-y-6">
+                            <h3 className="font-headline text-xl font-semibold">Logistics & Extras</h3>
+                            <div className="grid md:grid-cols-2 gap-4 text-muted-foreground">
+                                <BooleanItem label="Travel provided" value={gig.travelProvided} />
+                                <BooleanItem label="Accommodation provided" value={gig.accommodationProvided} />
+                                <BooleanItem label="Portfolio link required" value={gig.portfolioLinkRequired} />
+                            </div>
+                         </div>
+
+                        {gig.consentRequired && gig.consentRequired.length > 0 && (
+                            <>
+                            <Separator className="my-6" />
+                            <div>
+                                 <h3 className="font-headline text-xl font-semibold mb-3">Required Consents</h3>
+                                 <div className="flex flex-wrap gap-2">
+                                    {gig.consentRequired.map(consent => <Badge key={consent} variant="destructive">{consent}</Badge>)}
+                                </div>
+                            </div>
+                            </>
+                        )}
+                    </TabsContent>
+                    <TabsContent value="applicants" className="p-6">
+                         {applicants.length > 0 ? (
+                             <div className="space-y-4">
+                                {applicants.map(app => (
+                                    app.model &&
+                                    <div key={app.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div className="flex items-center gap-4">
+                                            <Image src={app.model.profilePicture} alt={app.model.name} width={40} height={40} className="rounded-full object-cover"/>
+                                            <div>
+                                                <p className="font-semibold">{app.model.name}</p>
+                                                <p className="text-sm text-muted-foreground">{new Date(app.appliedDate).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                         <div className="flex items-center gap-4">
+                                            <Badge variant={app.status === 'Selected' ? 'default' : 'secondary'}>{app.status}</Badge>
+                                             <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="outline">View Profile</Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+                                                    <ProfileDetails modelId={app.modelId} />
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                         ) : (
+                            <div className="text-center py-12 text-muted-foreground">
+                                <p>No applications received yet.</p>
+                            </div>
+                         )}
+                    </TabsContent>
+                </ScrollArea>
+            </Tabs>
+        </div>
     );
 }
 

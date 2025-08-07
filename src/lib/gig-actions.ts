@@ -58,11 +58,20 @@ export type Gig = {
     status: 'Pending' | 'Verified' | 'Rejected';
 }
 
+const APPLICATION_STATUSES = ['Applied', 'L1 Approved', 'L2 Approved', 'Director Approved', 'Selected', 'Rejected'] as const;
+export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
+
 export type Application = {
+    id: string;
     gigId: string;
     modelId: string;
-    date: string;
+    appliedDate: string;
+    status: ApplicationStatus;
+    updatedDate: string;
 }
+
+const APPLICATION_HEADERS = ['id', 'gigId', 'modelId', 'appliedDate', 'status', 'updatedDate'];
+
 
 function readGigs(): Gig[] {
     if(!fs.existsSync(gigsCsvFilePath)) {
@@ -176,9 +185,8 @@ export async function updateGig(gigId: string, data: Partial<Gig>) {
 // Application Functions
 
 function readApplications(): Application[] {
-    const headers = ['gigId', 'modelId', 'date'];
     if(!fs.existsSync(applicationsCsvFilePath)) {
-        fs.writeFileSync(applicationsCsvFilePath, headers.join(',') + '\n', 'utf-8');
+        fs.writeFileSync(applicationsCsvFilePath, APPLICATION_HEADERS.join(',') + '\n', 'utf-8');
         return [];
     }
     const csvData = fs.readFileSync(applicationsCsvFilePath, 'utf-8');
@@ -186,15 +194,14 @@ function readApplications(): Application[] {
     if (lines.length <= 1) return [];
 
     return lines.slice(1).map(line => {
-        const [gigId, modelId, date] = line.split(',');
-        return { gigId, modelId, date };
+        const [id, gigId, modelId, appliedDate, status, updatedDate] = line.split(',');
+        return { id, gigId, modelId, appliedDate, status: status as ApplicationStatus, updatedDate };
     });
 }
 
 function writeApplications(applications: Application[]) {
-    const headers = ['gigId', 'modelId', 'date'];
-    const headerString = headers.join(',');
-    const rows = applications.map(app => [app.gigId, app.modelId, app.date].join(','));
+    const headerString = APPLICATION_HEADERS.join(',');
+    const rows = applications.map(app => [app.id, app.gigId, app.modelId, app.appliedDate, app.status, app.updatedDate].join(','));
     const csvString = [headerString, ...rows].join('\n') + '\n';
     fs.writeFileSync(applicationsCsvFilePath, csvString, 'utf-8');
 }
@@ -206,11 +213,16 @@ export async function applyForGig(gigId: string, modelId: string) {
     if (existingApplication) {
         throw new Error('You have already applied for this gig.');
     }
+    const newId = (applications.length > 0 ? Math.max(...applications.map(app => parseInt(app.id))) : 0) + 1;
+    const now = new Date().toISOString();
 
     const newApplication: Application = {
+        id: newId.toString(),
         gigId,
         modelId,
-        date: new Date().toISOString(),
+        appliedDate: now,
+        status: 'Applied',
+        updatedDate: now,
     };
 
     applications.push(newApplication);
@@ -223,6 +235,25 @@ export async function applyForGig(gigId: string, modelId: string) {
 export async function getApplicantsByGigId(gigId: string): Promise<Application[]> {
     const applications = readApplications();
     return applications.filter(app => app.gigId === gigId);
+}
+
+export async function getApplicationsByModelId(modelId: string): Promise<Application[]> {
+    const applications = readApplications();
+    return applications.filter(app => app.modelId === modelId);
+}
+
+export async function updateApplicationStatus(applicationId: string, status: ApplicationStatus) {
+    const applications = readApplications();
+    const appIndex = applications.findIndex(app => app.id === applicationId);
+    if(appIndex === -1) {
+        throw new Error("Application not found");
+    }
+    applications[appIndex].status = status;
+    applications[appIndex].updatedDate = new Date().toISOString();
+    writeApplications(applications);
+
+    revalidatePath('/brand/dashboard');
+    revalidatePath(`/gigs/${applications[appIndex].gigId}`);
 }
 
 export async function deleteGig(gigId: string): Promise<{ success: boolean }> {
