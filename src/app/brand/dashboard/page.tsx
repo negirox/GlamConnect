@@ -154,39 +154,42 @@ export default function BrandDashboardPage() {
     const handleRemoveModelFromList = async (modelId: string) => {
         if (!selectedList) return;
         try {
-            const updatedList = await removeModelFromList(selectedList.id, modelId);
+            // Optimistically update UI
             setSelectedListModels(prev => prev.filter(m => m.id !== modelId));
+
+            // Update on the server
+            const updatedList = await removeModelFromList(selectedList.id, modelId);
+            
+            // Update the main lists array to reflect count change
             setSavedLists(prev => prev.map(l => l.id === updatedList.id ? updatedList : l));
             setSelectedList(updatedList);
+            
             toast({ title: "Model Removed" });
         } catch (error) {
             toast({ title: "Error removing model", variant: "destructive" });
+            // Re-fetch to revert optimistic update on failure
+            handleOpenListModal(selectedList); 
         }
     }
-
-    const handleToggleModelSelection = (modelId: string) => {
-        setSelectedModelsForAdding(prev =>
-            prev.includes(modelId)
-            ? prev.filter(id => id !== modelId)
-            : [...prev, modelId]
-        );
-    };
 
     const handleAddModelsToList = async () => {
         if (!selectedList || selectedModelsForAdding.length === 0) return;
         try {
             const updatedList = await addModelsToList(selectedList.id, selectedModelsForAdding);
             
-            // Update local state to immediately reflect changes
+            // Update the main lists array immediately
             setSavedLists(prev => prev.map(l => l.id === updatedList.id ? updatedList : l));
             
-            // Re-fetch model details for the updated list
-            const modelPromises = updatedList.modelIds.map(id => getModelById(id));
-            const resolvedModels = (await Promise.all(modelPromises)).filter(Boolean) as Model[];
+            // Fetch only the newly added models to append to the view
+            const newModelPromises = selectedModelsForAdding
+                .filter(id => !selectedListModels.some(m => m.id === id))
+                .map(id => getModelById(id));
             
-            // Update state for the modal view
+            const newResolvedModels = (await Promise.all(newModelPromises)).filter(Boolean) as Model[];
+            
+            // Update state for the modal view without causing a full re-render
             setSelectedList(updatedList);
-            setSelectedListModels(resolvedModels);
+            setSelectedListModels(prev => [...prev, ...newResolvedModels]);
 
             toast({ title: "List Updated" });
             setIsAddModelsView(false); // Return to the list view
