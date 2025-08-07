@@ -237,6 +237,11 @@ export async function getApplicantsByGigId(gigId: string): Promise<Application[]
     return applications.filter(app => app.gigId === gigId);
 }
 
+export async function getApplicationsByModelId(modelId: string): Promise<Application[]> {
+    const applications = readApplications();
+    return applications.filter(app => app.modelId === modelId);
+}
+
 export async function updateApplicationStatus(applicationId: string, status: ApplicationStatus) {
     const applications = readApplications();
     const appIndex = applications.findIndex(app => app.id === applicationId);
