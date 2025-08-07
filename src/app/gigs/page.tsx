@@ -108,7 +108,7 @@ export default function GigsPage() {
                                     <DialogTrigger asChild>
                                         <Button><Briefcase className="mr-2"/>View & Apply</Button>
                                     </DialogTrigger>
-                                    <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                                    <DialogContent className="max-w-4xl h-[90vh] p-0">
                                        <GigDetails gigId={gig.id} />
                                     </DialogContent>
                                 </Dialog>

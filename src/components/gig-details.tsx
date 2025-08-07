@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { ScrollArea } from './ui/scroll-area';
 
 type GigDetailsProps = {
   gigId: string;
@@ -121,11 +122,11 @@ export function GigDetails({ gigId }: GigDetailsProps) {
     }
 
     if (loading) {
-        return <div className="flex items-center justify-center h-96"><Loader2 className="animate-spin" /></div>;
+        return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
     }
 
     if (!gig) {
-        return <p>Gig not found.</p>;
+        return <div className="flex items-center justify-center h-full"><p>Gig not found.</p></div>;
     }
 
     const InfoItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: React.ReactNode }) => (
@@ -133,7 +134,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
             <Icon className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
             <div>
                 <p className="font-semibold">{label}</p>
-                <div className="text-muted-foreground">{value}</div>
+                <div className="text-muted-foreground">{value || 'N/A'}</div>
             </div>
         </div>
     );
@@ -146,17 +147,17 @@ export function GigDetails({ gigId }: GigDetailsProps) {
     )
 
     return (
-        <Card>
-            <GigStatusAlert status={gig.status} />
-            <CardHeader>
+        <div className='flex flex-col h-full'>
+            <div className="p-6 border-b">
+                 <GigStatusAlert status={gig.status} />
                 <div className="flex flex-col md:flex-row md:justify-between gap-4">
                     <div>
                          <div className="flex items-center gap-4 mb-2">
                             <Badge variant="secondary">{gig.projectType}</Badge>
                             {gig.status === 'Verified' && <Badge variant='default' className='bg-green-600 hover:bg-green-700 flex items-center gap-1'><ShieldCheck className='h-3 w-3'/> Verified Gig</Badge>}
                         </div>
-                        <CardTitle className="font-headline text-4xl">{gig.title}</CardTitle>
-                        <CardDescription className="pt-2">Posted by {gig.brandName}</CardDescription>
+                        <h1 className="font-headline text-3xl md:text-4xl font-bold">{gig.title}</h1>
+                        <p className="pt-2 text-muted-foreground">Posted by {gig.brandName}</p>
                     </div>
                     <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
                        {session?.role === 'model' && (
@@ -193,53 +194,55 @@ export function GigDetails({ gigId }: GigDetailsProps) {
                        </p>
                     </div>
                 </div>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground mb-8">{gig.description}</p>
-                
-                <Separator className="my-6" />
+            </div>
 
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                        <h3 className="font-headline text-xl font-semibold">Project Details</h3>
-                        <InfoItem icon={MapPin} label="Location" value={gig.location} />
-                        <InfoItem icon={CalendarDays} label="Shoot Date & Time" value={`${new Date(gig.date).toLocaleDateString()} at ${gig.timing}`} />
-                        <InfoItem icon={Users} label="Models Needed" value={`${gig.modelsNeeded} (${gig.isGroupShoot ? 'Group shoot' : 'Solo shoot'})`} />
-                        <InfoItem icon={DollarSign} label="Compensation" value={formatBudget(gig)} />
-                    </div>
-                     <div className="space-y-6">
-                        <h3 className="font-headline text-xl font-semibold">Model Requirements</h3>
-                         <InfoItem icon={UserCheck} label="Gender Preference" value={gig.genderPreference} />
-                         {gig.ageRangeMin && gig.ageRangeMax && <InfoItem icon={Cake} label="Age Range" value={`${gig.ageRangeMin} - ${gig.ageRangeMax} years`} />}
-                         {gig.heightRangeMin && gig.heightRangeMax && <InfoItem icon={Ruler} label="Height Range" value={`${gig.heightRangeMin} - ${gig.heightRangeMax} cm`} />}
-                         {gig.experienceLevel && <InfoItem icon={Briefcase} label="Experience Level" value={gig.experienceLevel} />}
-                    </div>
-                </div>
-                
-                <Separator className="my-6" />
-
-                 <div className="space-y-6">
-                    <h3 className="font-headline text-xl font-semibold">Logistics & Extras</h3>
-                    <div className="grid md:grid-cols-2 gap-4 text-muted-foreground">
-                        <BooleanItem label="Travel provided" value={gig.travelProvided} />
-                        <BooleanItem label="Accommodation provided" value={gig.accommodationProvided} />
-                        <BooleanItem label="Portfolio link required" value={gig.portfolioLinkRequired} />
-                    </div>
-                 </div>
-
-                {gig.consentRequired && gig.consentRequired.length > 0 && (
-                    <>
+            <ScrollArea className="flex-grow">
+                 <div className="p-6">
+                    <p className="text-muted-foreground mb-8">{gig.description}</p>
+                    
                     <Separator className="my-6" />
-                    <div>
-                         <h3 className="font-headline text-xl font-semibold mb-3">Required Consents</h3>
-                         <div className="flex flex-wrap gap-2">
-                            {gig.consentRequired.map(consent => <Badge key={consent} variant="destructive">{consent}</Badge>)}
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <h3 className="font-headline text-xl font-semibold">Project Details</h3>
+                            <InfoItem icon={MapPin} label="Location" value={gig.location} />
+                            <InfoItem icon={CalendarDays} label="Shoot Date & Time" value={`${new Date(gig.date).toLocaleDateString()} at ${gig.timing}`} />
+                            <InfoItem icon={Users} label="Models Needed" value={`${gig.modelsNeeded} (${gig.isGroupShoot ? 'Group shoot' : 'Solo shoot'})`} />
+                            <InfoItem icon={DollarSign} label="Compensation" value={formatBudget(gig)} />
+                        </div>
+                         <div className="space-y-6">
+                            <h3 className="font-headline text-xl font-semibold">Model Requirements</h3>
+                             <InfoItem icon={UserCheck} label="Gender Preference" value={gig.genderPreference} />
+                             {(gig.ageRangeMin && gig.ageRangeMax) && <InfoItem icon={Cake} label="Age Range" value={`${gig.ageRangeMin} - ${gig.ageRangeMax} years`} />}
+                             {(gig.heightRangeMin && gig.heightRangeMax) && <InfoItem icon={Ruler} label="Height Range" value={`${gig.heightRangeMin} - ${gig.heightRangeMax} cm`} />}
+                             {gig.experienceLevel && <InfoItem icon={Briefcase} label="Experience Level" value={gig.experienceLevel} />}
                         </div>
                     </div>
-                    </>
-                )}
+                    
+                    <Separator className="my-6" />
 
-            </CardContent>
-        </Card>
+                     <div className="space-y-6">
+                        <h3 className="font-headline text-xl font-semibold">Logistics & Extras</h3>
+                        <div className="grid md:grid-cols-2 gap-4 text-muted-foreground">
+                            <BooleanItem label="Travel provided" value={gig.travelProvided} />
+                            <BooleanItem label="Accommodation provided" value={gig.accommodationProvided} />
+                            <BooleanItem label="Portfolio link required" value={gig.portfolioLinkRequired} />
+                        </div>
+                     </div>
+
+                    {gig.consentRequired && gig.consentRequired.length > 0 && (
+                        <>
+                        <Separator className="my-6" />
+                        <div>
+                             <h3 className="font-headline text-xl font-semibold mb-3">Required Consents</h3>
+                             <div className="flex flex-wrap gap-2">
+                                {gig.consentRequired.map(consent => <Badge key={consent} variant="destructive">{consent}</Badge>)}
+                            </div>
+                        </div>
+                        </>
+                    )}
+                 </div>
+            </ScrollArea>
+        </div>
     );
 }

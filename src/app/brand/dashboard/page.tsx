@@ -243,7 +243,7 @@ export default function BrandDashboardPage() {
                                                 <DialogTrigger asChild>
                                                      <Button variant="outline" size="sm">View</Button>
                                                 </DialogTrigger>
-                                                <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                                                <DialogContent className="max-w-4xl h-[90vh] p-0">
                                                     <GigDetails gigId={gig.id} />
                                                 </DialogContent>
                                             </Dialog>
