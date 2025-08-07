@@ -62,40 +62,48 @@
   .theme-zinc {
     --primary: 240 5.9% 10%;
     --primary-foreground: 0 0% 98%;
+    --foreground: 240 10% 3.9%;
   }
 
   .dark.theme-zinc {
     --primary: 0 0% 98%;
     --primary-foreground: 240 5.9% 10%;
+    --foreground: 0 0% 98%;
   }
 
   .theme-rose {
     --primary: 346.8 77.2% 49.8%;
     --primary-foreground: 355.7 100% 97.3%;
+    --foreground: 346.8 77.2% 49.8%;
   }
 
   .dark.theme-rose {
     --primary: 346.8 77.2% 49.8%;
     --primary-foreground: 355.7 100% 97.3%;
+    --foreground: 346.8 77.2% 49.8%;
   }
 
   .theme-blue {
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
+    --foreground: 221.2 83.2% 53.3%;
   }
   .dark.theme-blue {
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
+    --foreground: 221.2 83.2% 53.3%;
   }
 
   .theme-orange {
     --primary: 24.6 95% 53.1%;
     --primary-foreground: 60 9.1% 97.8%;
+    --foreground: 24.6 95% 53.1%;
   }
 
   .dark.theme-orange {
     --primary: 24.6 95% 53.1%;
     --primary-foreground: 60 9.1% 97.8%;
+    --foreground: 24.6 95% 53.1%;
   }
 }
 
@@ -107,4 +115,11 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  
+  [data-font="inter-lora"] {
+    --font-body: var(--font-inter);
+    --font-headline: var(--font-lora);
+  }
 }
+
+    

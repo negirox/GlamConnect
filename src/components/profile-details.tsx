@@ -32,6 +32,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Model } from '@/lib/mock-data';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from './ui/scroll-area';
 
 type ProfileDetailsProps = {
   modelId: string;
@@ -82,7 +83,7 @@ export function ProfileDetails({ modelId }: ProfileDetailsProps) {
   return (
       <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
         <div className="md:col-span-1 flex flex-col items-center">
-          <Card className="w-full sticky top-24">
+          <Card className="w-full sticky top-6">
             <CardHeader className="p-0">
               <div className="relative aspect-[3/4] w-full">
                 <Image
@@ -119,7 +120,7 @@ export function ProfileDetails({ modelId }: ProfileDetailsProps) {
                     </Button>
                   )}
               </div>
-              <Button size="lg" className="w-full mt-6 bg-secondary hover:bg-accent">
+              <Button size="lg" className="w-full mt-6">
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Contact {model.name.split(' ')[0]}
               </Button>
@@ -201,13 +202,13 @@ export function ProfileDetails({ modelId }: ProfileDetailsProps) {
                       />
                     </div>
                   </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
+                  <DialogContent className="max-w-3xl max-h-[90vh]">
                      <Image
                         src={src}
                         alt={`Portfolio image ${index + 1} for ${model.name}`}
                         width={800}
                         height={1067}
-                        className="object-contain rounded-lg"
+                        className="object-contain w-full h-full rounded-lg"
                       />
                   </DialogContent>
                 </Dialog>
@@ -218,3 +219,5 @@ export function ProfileDetails({ modelId }: ProfileDetailsProps) {
       </div>
   );
 }
+
+    

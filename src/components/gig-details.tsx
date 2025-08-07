@@ -147,8 +147,8 @@ export function GigDetails({ gigId }: GigDetailsProps) {
     )
 
     return (
-        <div className='flex flex-col h-full'>
-            <div className="p-6 border-b">
+        <>
+            <div className="p-6 border-b shrink-0">
                  <GigStatusAlert status={gig.status} />
                 <div className="flex flex-col md:flex-row md:justify-between gap-4">
                     <div>
@@ -196,7 +196,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
                 </div>
             </div>
 
-            <ScrollArea className="flex-grow">
+            <ScrollArea className="flex-1">
                  <div className="p-6">
                     <p className="text-muted-foreground mb-8">{gig.description}</p>
                     
@@ -243,6 +243,8 @@ export function GigDetails({ gigId }: GigDetailsProps) {
                     )}
                  </div>
             </ScrollArea>
-        </div>
+        </>
     );
 }
+
+    
