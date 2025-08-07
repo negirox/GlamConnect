@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone, Clock, Star, Trash2, ArrowLeft, CheckCircle } from "lucide-react";
+import { PlusCircle, Briefcase, Building, Loader2, User, Mail, Phone, Clock, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
@@ -19,7 +19,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { createSavedList, getListsByBrandId, SavedList, deleteList, removeModelFromList, addModelsToList } from "@/lib/saved-list-actions";
+import { createSavedList, getListsByBrandId, SavedList } from "@/lib/saved-list-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,10 +31,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { getModelById, getModels, Model } from "@/lib/data-actions";
-import { ModelCard } from "@/components/model-card";
-import Image from "next/image";
+import { getModels, Model } from "@/lib/data-actions";
 import { GigDetails } from "@/components/gig-details";
+import { ListManagementModal } from "@/components/list-management-modal";
 
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
@@ -45,10 +44,6 @@ export default function BrandDashboardPage() {
     const [savedLists, setSavedLists] = useState<SavedList[]>([]);
     const [allModels, setAllModels] = useState<Model[]>([]);
     const [selectedList, setSelectedList] = useState<SavedList | null>(null);
-    const [selectedListModels, setSelectedListModels] = useState<Model[]>([]);
-    const [isListModalOpen, setIsListModalOpen] = useState(false);
-    const [isAddModelsView, setIsAddModelsView] = useState(false);
-    const [selectedModelsForAdding, setSelectedModelsForAdding] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [newListName, setNewListName] = useState("");
     const [isCreatingList, setIsCreatingList] = useState(false);
@@ -114,19 +109,6 @@ export default function BrandDashboardPage() {
             setIsCreatingList(false);
         }
     }
-    
-    const handleDeleteList = async () => {
-        if (!selectedList) return;
-        try {
-            await deleteList(selectedList.id);
-            toast({ title: 'List Deleted', description: `The list "${selectedList.name}" has been deleted.` });
-            setIsListModalOpen(false);
-            setSelectedList(null);
-            fetchBrandData(false);
-        } catch (error) {
-             toast({ title: "Error", description: "Failed to delete list.", variant: "destructive" });
-        }
-    }
 
     const handleDeleteGig = async (gigId: string) => {
       setIsDeletingGig(gigId);
@@ -140,63 +122,6 @@ export default function BrandDashboardPage() {
       } finally {
         setIsDeletingGig(null);
       }
-    }
-
-    const handleOpenListModal = async (list: SavedList) => {
-        setSelectedList(list);
-        const modelPromises = list.modelIds.map(id => getModelById(id));
-        const resolvedModels = (await Promise.all(modelPromises)).filter(Boolean) as Model[];
-        setSelectedListModels(resolvedModels);
-        setIsListModalOpen(true);
-        setIsAddModelsView(false);
-    }
-    
-    const handleRemoveModelFromList = async (modelId: string) => {
-        if (!selectedList) return;
-        try {
-            // Optimistically update UI
-            setSelectedListModels(prev => prev.filter(m => m.id !== modelId));
-
-            // Update on the server
-            const updatedList = await removeModelFromList(selectedList.id, modelId);
-            
-            // Update the main lists array to reflect count change
-            setSavedLists(prev => prev.map(l => l.id === updatedList.id ? updatedList : l));
-            setSelectedList(updatedList);
-            
-            toast({ title: "Model Removed" });
-        } catch (error) {
-            toast({ title: "Error removing model", variant: "destructive" });
-            // Re-fetch to revert optimistic update on failure
-            handleOpenListModal(selectedList); 
-        }
-    }
-
-    const handleAddModelsToList = async () => {
-        if (!selectedList || selectedModelsForAdding.length === 0) return;
-        try {
-            const updatedList = await addModelsToList(selectedList.id, selectedModelsForAdding);
-            
-            // Update the main lists array immediately
-            setSavedLists(prev => prev.map(l => l.id === updatedList.id ? updatedList : l));
-            
-            // Fetch only the newly added models to append to the view
-            const newModelPromises = selectedModelsForAdding
-                .filter(id => !selectedListModels.some(m => m.id === id))
-                .map(id => getModelById(id));
-            
-            const newResolvedModels = (await Promise.all(newModelPromises)).filter(Boolean) as Model[];
-            
-            // Update state for the modal view without causing a full re-render
-            setSelectedList(updatedList);
-            setSelectedListModels(prev => [...prev, ...newResolvedModels]);
-
-            toast({ title: "List Updated" });
-            setIsAddModelsView(false); // Return to the list view
-            setSelectedModelsForAdding([]);
-        } catch (error) {
-             toast({ title: "Error updating list", variant: "destructive" });
-        }
     }
       
     const statusColor: Record<Gig['status'], string> = {
@@ -226,108 +151,17 @@ export default function BrandDashboardPage() {
       )
     }
 
-    const ListManagementModal = () => (
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-            <DialogHeader>
-                {isAddModelsView ? (
-                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" onClick={() => setIsAddModelsView(false)}><ArrowLeft/></Button>
-                        <div>
-                            <DialogTitle>Add to "{selectedList?.name}"</DialogTitle>
-                            <DialogDescription>Select models to add to your list.</DialogDescription>
-                        </div>
-                    </div>
-                ) : (
-                    <DialogTitle>Manage "{selectedList?.name}"</DialogTitle>
-                )}
-            </DialogHeader>
-            <div className="flex-grow overflow-hidden">
-                <ScrollArea className="h-full pr-6">
-                {isAddModelsView ? (
-                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {allModels.map(model => {
-                            const isSelected = selectedModelsForAdding.includes(model.id);
-                            const alreadyInList = selectedList?.modelIds.includes(model.id);
-                            return (
-                                <Card 
-                                    key={model.id} 
-                                    onClick={() => !alreadyInList && handleToggleModelSelection(model.id)}
-                                    className={`cursor-pointer transition-all ${alreadyInList ? 'opacity-50 cursor-not-allowed' : ''} ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-2 hover:ring-primary/50'}`}
-                                >
-                                    <CardHeader className="p-0 relative">
-                                        <Image src={model.profilePicture} alt={model.name} width={300} height={400} className="rounded-t-lg object-cover aspect-[3/4]" />
-                                        {(isSelected || alreadyInList) && (
-                                            <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-                                                <CheckCircle className="h-5 w-5"/>
-                                            </div>
-                                        )}
-                                    </CardHeader>
-                                    <CardContent className="p-3">
-                                        <p className="font-semibold truncate">{model.name}</p>
-                                        <p className="text-sm text-muted-foreground truncate">{model.location}</p>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
-                    </div>
-                ) : (
-                    selectedListModels.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                             {selectedListModels.map(model => (
-                                <div key={model.id} className="relative group">
-                                    <ModelCard model={model} />
-                                    <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10" onClick={() => handleRemoveModelFromList(model.id)}>
-                                        <Trash2 className="h-4 w-4"/>
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                         <div className="text-center text-muted-foreground pt-12">
-                            <p>This list is empty. Add some models to get started!</p>
-                        </div>
-                    )
-                )}
-                </ScrollArea>
-            </div>
-            <DialogFooter className="mt-auto pt-4 border-t">
-                {isAddModelsView ? (
-                    <>
-                        <Button variant="ghost" onClick={() => setIsAddModelsView(false)}>Cancel</Button>
-                        <Button onClick={handleAddModelsToList}>Add Selected Models</Button>
-                    </>
-                ) : (
-                    <>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="mr-auto">Delete List</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete your list "{selectedList?.name}".
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteList}>Yes, delete list</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                    <Button variant="outline" onClick={() => { setSelectedModelsForAdding([]); setIsAddModelsView(true); }}>Add Models</Button>
-                    <DialogClose asChild><Button>Done</Button></DialogClose>
-                    </>
-                )}
-            </DialogFooter>
-        </DialogContent>
-    );
-
     return (
         <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
-            <Dialog open={isListModalOpen} onOpenChange={setIsListModalOpen}>
-                <ListManagementModal />
-            </Dialog>
+            {selectedList && (
+                 <ListManagementModal 
+                    list={selectedList}
+                    allModels={allModels}
+                    isOpen={!!selectedList}
+                    onClose={() => setSelectedList(null)}
+                    onListUpdate={() => fetchBrandData(false)}
+                 />
+            )}
 
             <div className="space-y-2 mb-8">
                 <h1 className="text-4xl font-headline font-bold">Welcome, {brand.name}</h1>
@@ -486,7 +320,7 @@ export default function BrandDashboardPage() {
                                             <p className="font-semibold">{list.name}</p>
                                             <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
                                         </div>
-                                        <Button variant="outline" size="sm" onClick={() => handleOpenListModal(list)}>
+                                        <Button variant="outline" size="sm" onClick={() => setSelectedList(list)}>
                                           Manage
                                         </Button>
                                     </div>
