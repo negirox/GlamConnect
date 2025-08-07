@@ -34,6 +34,7 @@ import {
 import { getModelById, getModels, Model } from "@/lib/data-actions";
 import { ModelCard } from "@/components/model-card";
 import Image from "next/image";
+import { GigDetails } from "@/components/gig-details";
 
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
@@ -189,6 +190,7 @@ export default function BrandDashboardPage() {
 
             toast({ title: "List Updated" });
             setIsAddModelsView(false); // Return to the list view
+            setSelectedModelsForAdding([]);
         } catch (error) {
              toast({ title: "Error updating list", variant: "destructive" });
         }
