@@ -85,7 +85,7 @@ export default function GigApprovalsPage() {
                                     <DialogTrigger asChild>
                                         <Button size="sm" variant="outline">View Gig</Button>
                                     </DialogTrigger>
-                                    <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                                    <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
                                        <GigDetails gigId={gig.id} />
                                     </DialogContent>
                                 </Dialog>
