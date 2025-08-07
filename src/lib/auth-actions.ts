@@ -19,7 +19,7 @@ type User = {
 
 export async function getSession() {
   const cookieStore = cookies();
-  const session = cookieStore.get('session')?.value;
+  const session = (await cookieStore).get('session')?.value;
   if (!session) return { isLoggedIn: false };
 
   try {
@@ -55,7 +55,7 @@ export async function authenticate(
             role: user.role,
         };
         
-        cookies().set('session', JSON.stringify(sessionData), {
+        (await cookies()).set('session', JSON.stringify(sessionData), {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             maxAge: 60 * 60 * 24 * 7, // One week
@@ -87,6 +87,6 @@ export async function authenticate(
 
 
 export async function logout() {
-  cookies().delete('session');
+  (await cookies()).delete('session');
   redirect('/login');
 }
