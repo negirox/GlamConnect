@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getGigById, Gig, applyForGig } from '@/lib/gig-actions';
+import { getGigById, Gig, applyForGig, getApplicantsByGigId } from '@/lib/gig-actions';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
     const [loading, setLoading] = useState(true);
     const [session, setSession] = useState<any>(null);
     const [isApplying, setIsApplying] = useState(false);
+    const [hasApplied, setHasApplied] = useState(false);
     const [hasConsented, setHasConsented] = useState(false);
     const { toast } = useToast();
 
@@ -36,6 +37,14 @@ export function GigDetails({ gigId }: GigDetailsProps) {
             ]);
             setGig(fetchedGig);
             setSession(sessionData);
+
+            if (fetchedGig && sessionData.isLoggedIn && sessionData.role === 'model') {
+                const applicants = await getApplicantsByGigId(fetchedGig.id);
+                if(applicants.some(app => app.modelId === sessionData.id)) {
+                    setHasApplied(true);
+                }
+            }
+
             setLoading(false);
         }
         if (gigId) {
@@ -51,6 +60,7 @@ export function GigDetails({ gigId }: GigDetailsProps) {
         setIsApplying(true);
         try {
             await applyForGig(gig.id, session.id);
+            setHasApplied(true);
             toast({
                 title: 'Application Sent!',
                 description: 'The brand has received your application.',
@@ -150,7 +160,9 @@ export function GigDetails({ gigId }: GigDetailsProps) {
                        {session?.role === 'model' && (
                         <Dialog>
                             <DialogTrigger asChild>
-                                <Button size="lg" disabled={gig.status !== 'Verified'}><Briefcase className="mr-2"/> Apply Now</Button>
+                                <Button size="lg" disabled={gig.status !== 'Verified' || hasApplied}>
+                                    <Briefcase className="mr-2"/> {hasApplied ? 'Already Applied' : 'Apply Now'}
+                                </Button>
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
