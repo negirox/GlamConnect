@@ -31,6 +31,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { getModels, Model } from "@/lib/data-actions";
+import { GigDetails } from "@/components/gig-details";
+import { ListManagementModal } from "@/components/list-management-modal";
 
 
 type GigWithApplicantCount = Gig & { applicantCount: number };
@@ -39,6 +42,8 @@ export default function BrandDashboardPage() {
     const [brand, setBrand] = useState<Brand | null>(null);
     const [gigs, setGigs] = useState<GigWithApplicantCount[]>([]);
     const [savedLists, setSavedLists] = useState<SavedList[]>([]);
+    const [allModels, setAllModels] = useState<Model[]>([]);
+    const [selectedList, setSelectedList] = useState<SavedList | null>(null);
     const [loading, setLoading] = useState(true);
     const [newListName, setNewListName] = useState("");
     const [isCreatingList, setIsCreatingList] = useState(false);
@@ -46,21 +51,22 @@ export default function BrandDashboardPage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    const fetchBrandData = async () => {
+    const fetchBrandData = async (showLoading = true) => {
         const session = await getSession();
         if(!session.isLoggedIn || !session.email || session.role !== 'brand') {
             router.push('/login');
             return;
         }
 
-        setLoading(true);
+        if(showLoading) setLoading(true);
         try {
             const fetchedBrand = await getBrandByEmail(session.email);
             setBrand(fetchedBrand);
             if (fetchedBrand) {
-                const [fetchedGigs, fetchedLists] = await Promise.all([
+                const [fetchedGigs, fetchedLists, allFetchedModels] = await Promise.all([
                     getGigsByBrandId(fetchedBrand.id),
                     getListsByBrandId(fetchedBrand.id),
+                    getModels(),
                 ]);
 
                 const gigsWithCounts = await Promise.all(
@@ -71,12 +77,13 @@ export default function BrandDashboardPage() {
                 );
                 setGigs(gigsWithCounts);
                 setSavedLists(fetchedLists);
+                setAllModels(allFetchedModels);
             }
         } catch (error) {
             console.error("Failed to fetch brand data:", error);
             setBrand(null);
         } finally {
-            setLoading(false);
+            if(showLoading) setLoading(false);
         }
     }
 
@@ -95,7 +102,7 @@ export default function BrandDashboardPage() {
             await createSavedList(brand.id, newListName);
             toast({ title: "Success", description: "New list created." });
             setNewListName("");
-            await fetchBrandData(); // Re-fetch data to update list
+            await fetchBrandData(false); // Re-fetch data to update list
         } catch(error) {
             toast({ title: "Error", description: "Failed to create list.", variant: "destructive" });
         } finally {
@@ -108,7 +115,7 @@ export default function BrandDashboardPage() {
       try {
         await deleteGig(gigId);
         toast({ title: 'Gig Deleted', description: 'The gig has been successfully removed.' });
-        fetchBrandData();
+        fetchBrandData(false);
       } catch (error) {
         console.error(error);
         toast({ title: 'Error', description: 'Failed to delete the gig.', variant: 'destructive' });
@@ -146,6 +153,16 @@ export default function BrandDashboardPage() {
 
     return (
         <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
+            {selectedList && (
+                 <ListManagementModal 
+                    list={selectedList}
+                    allModels={allModels}
+                    isOpen={!!selectedList}
+                    onClose={() => setSelectedList(null)}
+                    onListUpdate={() => fetchBrandData(false)}
+                 />
+            )}
+
             <div className="space-y-2 mb-8">
                 <h1 className="text-4xl font-headline font-bold">Welcome, {brand.name}</h1>
                 <p className="text-muted-foreground">Manage your job postings, review applicants, and find the perfect talent.</p>
@@ -222,9 +239,14 @@ export default function BrandDashboardPage() {
                                         </div>
                                         <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                                             <Badge variant="secondary">{gig.applicantCount} Applicants</Badge>
-                                            <Button variant="outline" size="sm" asChild>
-                                                <Link href={`/gigs/${gig.id}`}>View</Link>
-                                            </Button>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                     <Button variant="outline" size="sm">View</Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-4xl h-[90vh] p-0">
+                                                    <GigDetails gigId={gig.id} />
+                                                </DialogContent>
+                                            </Dialog>
                                              <AlertDialog>
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="destructive" size="icon" className="h-8 w-8">
@@ -298,8 +320,8 @@ export default function BrandDashboardPage() {
                                             <p className="font-semibold">{list.name}</p>
                                             <p className="text-sm text-muted-foreground">{list.modelIds.length} Models</p>
                                         </div>
-                                        <Button variant="outline" size="sm" asChild>
-                                          <Link href={`/brand/saved-lists/${list.id}`}>View</Link>
+                                        <Button variant="outline" size="sm" onClick={() => setSelectedList(list)}>
+                                          Manage
                                         </Button>
                                     </div>
                                 )) : (

@@ -86,24 +86,26 @@ export async function deleteList(listId: string): Promise<{ success: boolean }> 
 
     writeSavedLists(lists);
     revalidatePath('/brand/dashboard');
-    revalidatePath(`/brand/saved-lists/${listId}`);
     return { success: true };
 }
 
 
-export async function addModelsToList(listId: string, modelIds: string[]): Promise<SavedList> {
+export async function addModelsToList(listId: string, modelIdsToAdd: string[]): Promise<SavedList> {
     const lists = readSavedLists();
     const listIndex = lists.findIndex(l => l.id === listId);
     if (listIndex === -1) {
         throw new Error('List not found');
     }
     const list = lists[listIndex];
-    // This logic was incorrect. It should just set the list to the new list.
-    list.modelIds = [...new Set(modelIds)];
+    
+    // Combine old and new model IDs, ensuring no duplicates
+    const updatedModelIds = [...new Set([...list.modelIds, ...modelIdsToAdd])];
+    
+    list.modelIds = updatedModelIds;
     lists[listIndex] = list;
 
     writeSavedLists(lists);
-    revalidatePath(`/brand/saved-lists/${listId}`);
+    revalidatePath('/brand/dashboard');
     return list;
 }
 
@@ -116,6 +118,6 @@ export async function removeModelFromList(listId: string, modelId: string): Prom
     const list = lists[listIndex];
     list.modelIds = list.modelIds.filter(id => id !== modelId);
     writeSavedLists(lists);
-    revalidatePath(`/brand/saved-lists/${listId}`);
+    revalidatePath('/brand/dashboard');
     return list;
 }

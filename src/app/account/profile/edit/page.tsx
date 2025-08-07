@@ -518,7 +518,7 @@ export default function ProfileManagementPage() {
       </div>
 
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="flex flex-wrap h-auto bg-primary/80">
+        <TabsList className="flex flex-wrap h-auto bg-primary/10">
           <TabsTrigger value="basic"><User className="mr-2 h-4 w-4"/>Basic Info</TabsTrigger>
           <TabsTrigger value="attributes"><Ruler className="mr-2 h-4 w-4"/>Attributes</TabsTrigger>
           <TabsTrigger value="portfolio"><Camera className="mr-2 h-4 w-4"/>Portfolio</TabsTrigger>
@@ -1153,5 +1153,7 @@ export default function ProfileManagementPage() {
     </TooltipProvider>
   );
 }
+
+    
 
     

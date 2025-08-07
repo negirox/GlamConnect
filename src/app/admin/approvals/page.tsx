@@ -10,8 +10,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Check, X, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { ProfileDetails } from '@/components/profile-details';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ApprovalsPage() {
     const [pendingModels, setPendingModels] = useState<Model[]>([]);
@@ -82,9 +84,16 @@ export default function ApprovalsPage() {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-between">
-                                <Button size="sm" variant="outline" asChild>
-                                    <Link href={`/profile/${model.id}`} target="_blank">View Profile</Link>
-                                </Button>
+                                 <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button size="sm" variant="outline">View Profile</Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-6xl h-[90vh]">
+                                        <ScrollArea className="h-full pr-6">
+                                            <ProfileDetails modelId={model.id} />
+                                        </ScrollArea>
+                                    </DialogContent>
+                                </Dialog>
                                 <div className="flex gap-2">
                                      <Button 
                                         size="sm" 

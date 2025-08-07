@@ -1,35 +1,34 @@
 
-
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getGigById, Gig, applyForGig } from '@/lib/gig-actions';
+import { getGigById, Gig, applyForGig, getApplicantsByGigId } from '@/lib/gig-actions';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertTriangle, Briefcase, MapPin, CalendarDays, Clock, Users, DollarSign, CheckCircle, XCircle, Palette, Ruler, Cake, UserCheck, Info, ShieldCheck } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Loader2, Briefcase, MapPin, CalendarDays, Clock, Users, DollarSign, CheckCircle, XCircle, Palette, Ruler, Cake, UserCheck, Info, ShieldCheck } from 'lucide-react';
 import { getSession } from '@/lib/auth-actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { ScrollArea } from './ui/scroll-area';
 
-
-type GigPageProps = {
-  params: { id: string };
+type GigDetailsProps = {
+  gigId: string;
 };
 
-export default function GigPage({ params }: GigPageProps) {
+export function GigDetails({ gigId }: GigDetailsProps) {
     const [gig, setGig] = useState<Gig | null>(null);
     const [loading, setLoading] = useState(true);
     const [session, setSession] = useState<any>(null);
     const [isApplying, setIsApplying] = useState(false);
+    const [hasApplied, setHasApplied] = useState(false);
     const [hasConsented, setHasConsented] = useState(false);
+    const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false);
     const { toast } = useToast();
-    const gigId = params.id;
-
 
     useEffect(() => {
         async function fetchData(id: string) {
@@ -40,6 +39,14 @@ export default function GigPage({ params }: GigPageProps) {
             ]);
             setGig(fetchedGig);
             setSession(sessionData);
+
+            if (fetchedGig && sessionData.isLoggedIn && sessionData.role === 'model') {
+                const applicants = await getApplicantsByGigId(fetchedGig.id);
+                if(applicants.some(app => app.modelId === sessionData.id)) {
+                    setHasApplied(true);
+                }
+            }
+
             setLoading(false);
         }
         if (gigId) {
@@ -55,10 +62,12 @@ export default function GigPage({ params }: GigPageProps) {
         setIsApplying(true);
         try {
             await applyForGig(gig.id, session.id);
+            setHasApplied(true);
             toast({
                 title: 'Application Sent!',
                 description: 'The brand has received your application.',
             });
+            setIsApplyDialogOpen(false); // Close the dialog on success
         } catch (error: any) {
             toast({
                 title: 'Error',
@@ -112,42 +121,20 @@ export default function GigPage({ params }: GigPageProps) {
         }
     }
 
-
     if (loading) {
-        return <div className="container flex items-center justify-center h-96"><Loader2 className="animate-spin" /></div>;
+        return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
     }
 
     if (!gig) {
-        return (
-            <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12 text-center">
-                <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Gig Not Found</AlertTitle>
-                    <AlertDescription>The gig you are looking for does not exist or has been removed.</AlertDescription>
-                </Alert>
-            </div>
-        );
+        return <div className="flex items-center justify-center h-full"><p>Gig not found.</p></div>;
     }
-    
-    // Don't show non-verified gigs to models
-    if (session?.role === 'model' && gig.status !== 'Verified') {
-        return (
-             <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12 text-center">
-                <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Gig Not Available</AlertTitle>
-                    <AlertDescription>This gig is currently not available for applications.</AlertDescription>
-                </Alert>
-            </div>
-        )
-    }
-    
+
     const InfoItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: React.ReactNode }) => (
         <div className="flex items-start gap-3">
             <Icon className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
             <div>
                 <p className="font-semibold">{label}</p>
-                <div className="text-muted-foreground">{value}</div>
+                <div className="text-muted-foreground">{value || 'N/A'}</div>
             </div>
         </div>
     );
@@ -159,56 +146,58 @@ export default function GigPage({ params }: GigPageProps) {
         </div>
     )
 
-
     return (
-        <div className="container mx-auto max-w-4xl px-4 md:px-6 py-12">
-            <GigStatusAlert status={gig.status} />
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col md:flex-row md:justify-between gap-4">
-                        <div>
-                             <div className="flex items-center gap-4 mb-2">
-                                <Badge variant="secondary">{gig.projectType}</Badge>
-                                {gig.status === 'Verified' && <Badge variant='default' className='bg-green-600 hover:bg-green-700 flex items-center gap-1'><ShieldCheck className='h-3 w-3'/> Verified Gig</Badge>}
-                            </div>
-                            <CardTitle className="font-headline text-4xl">{gig.title}</CardTitle>
-                            <CardDescription className="pt-2">Posted by {gig.brandName}</CardDescription>
+        <>
+            <div className="p-6 border-b shrink-0">
+                 <GigStatusAlert status={gig.status} />
+                <div className="flex flex-col md:flex-row md:justify-between gap-4">
+                    <div>
+                         <div className="flex items-center gap-4 mb-2">
+                            <Badge variant="secondary">{gig.projectType}</Badge>
+                            {gig.status === 'Verified' && <Badge variant='default' className='bg-green-600 hover:bg-green-700 flex items-center gap-1'><ShieldCheck className='h-3 w-3'/> Verified Gig</Badge>}
                         </div>
-                        <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
-                           {session?.role === 'model' && (
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button size="lg" disabled={gig.status !== 'Verified'}><Briefcase className="mr-2"/> Apply Now</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Confirm Application</DialogTitle>
-                                        <DialogDescription>
-                                            By applying, you agree to share your public profile and portfolio with {gig.brandName} for consideration for this gig.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="flex items-center space-x-2 my-4">
-                                        <Checkbox id="terms" checked={hasConsented} onCheckedChange={(checked) => setHasConsented(Boolean(checked))} />
-                                        <Label htmlFor="terms">I understand and consent to sharing my profile.</Label>
-                                    </div>
-                                    <DialogFooter>
-                                        <DialogClose asChild><Button variant="ghost">Cancel</Button></DialogClose>
-                                        <Button onClick={handleApply} disabled={isApplying || !hasConsented}>
-                                            {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                            Submit Application
-                                        </Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                           )}
-                           <p className="text-sm text-destructive font-semibold flex items-center gap-2">
-                                <Clock className="h-4 w-4"/>
-                                Apply by: {new Date(gig.applicationDeadline).toLocaleDateString()}
-                           </p>
-                        </div>
+                        <h1 className="font-headline text-3xl md:text-4xl font-bold">{gig.title}</h1>
+                        <p className="pt-2 text-muted-foreground">Posted by {gig.brandName}</p>
                     </div>
-                </CardHeader>
-                <CardContent>
+                    <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
+                       {session?.role === 'model' && (
+                        <Dialog open={isApplyDialogOpen} onOpenChange={setIsApplyDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="lg" disabled={gig.status !== 'Verified' || hasApplied}>
+                                    <Briefcase className="mr-2"/> {hasApplied ? 'Already Applied' : 'Apply Now'}
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Confirm Application</DialogTitle>
+                                    <DialogDescription>
+                                        By applying, you agree to share your public profile and portfolio with {gig.brandName} for consideration for this gig.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="flex items-center space-x-2 my-4">
+                                    <Checkbox id="terms" checked={hasConsented} onCheckedChange={(checked) => setHasConsented(Boolean(checked))} />
+                                    <Label htmlFor="terms">I understand and consent to sharing my profile.</Label>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="ghost" onClick={() => setIsApplyDialogOpen(false)}>Cancel</Button>
+                                    <Button onClick={handleApply} disabled={isApplying || !hasConsented}>
+                                        {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                        Submit Application
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                       )}
+                       <p className="text-sm text-destructive font-semibold flex items-center gap-2">
+                            <Clock className="h-4 w-4"/>
+                            Apply by: {new Date(gig.applicationDeadline).toLocaleDateString()}
+                       </p>
+                    </div>
+                </div>
+            </div>
+
+            <ScrollArea className="flex-1">
+                 <div className="p-6">
                     <p className="text-muted-foreground mb-8">{gig.description}</p>
                     
                     <Separator className="my-6" />
@@ -224,8 +213,8 @@ export default function GigPage({ params }: GigPageProps) {
                          <div className="space-y-6">
                             <h3 className="font-headline text-xl font-semibold">Model Requirements</h3>
                              <InfoItem icon={UserCheck} label="Gender Preference" value={gig.genderPreference} />
-                             {gig.ageRangeMin && gig.ageRangeMax && <InfoItem icon={Cake} label="Age Range" value={`${gig.ageRangeMin} - ${gig.ageRangeMax} years`} />}
-                             {gig.heightRangeMin && gig.heightRangeMax && <InfoItem icon={Ruler} label="Height Range" value={`${gig.heightRangeMin} - ${gig.heightRangeMax} cm`} />}
+                             {(gig.ageRangeMin && gig.ageRangeMax) && <InfoItem icon={Cake} label="Age Range" value={`${gig.ageRangeMin} - ${gig.ageRangeMax} years`} />}
+                             {(gig.heightRangeMin && gig.heightRangeMax) && <InfoItem icon={Ruler} label="Height Range" value={`${gig.heightRangeMin} - ${gig.heightRangeMax} cm`} />}
                              {gig.experienceLevel && <InfoItem icon={Briefcase} label="Experience Level" value={gig.experienceLevel} />}
                         </div>
                     </div>
@@ -252,9 +241,10 @@ export default function GigPage({ params }: GigPageProps) {
                         </div>
                         </>
                     )}
-
-                </CardContent>
-            </Card>
-        </div>
+                 </div>
+            </ScrollArea>
+        </>
     );
 }
+
+    

@@ -29,19 +29,18 @@ import {
   Info,
   Sigma,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Model } from '@/lib/mock-data';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from './ui/scroll-area';
 
-type ProfilePageProps = {
-  params: { id: string };
+type ProfileDetailsProps = {
+  modelId: string;
 };
 
-export default function ProfilePage({ params }: ProfilePageProps) {
+export function ProfileDetails({ modelId }: ProfileDetailsProps) {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
-  const modelId = params.id;
 
   useEffect(() => {
     const fetchModel = async (id: string) => {
@@ -57,7 +56,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
 
   if (loading) {
-    return <div className="flex h-[calc(100vh-8rem)] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
   if (!model) {
@@ -82,10 +81,9 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const socialLinks = model.socialLinks || [];
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 md:px-6 py-12">
       <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
         <div className="md:col-span-1 flex flex-col items-center">
-          <Card className="w-full sticky top-24">
+          <Card className="w-full sticky top-6">
             <CardHeader className="p-0">
               <div className="relative aspect-[3/4] w-full">
                 <Image
@@ -122,7 +120,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                     </Button>
                   )}
               </div>
-              <Button size="lg" className="w-full mt-6 bg-secondary hover:bg-accent">
+              <Button size="lg" className="w-full mt-6">
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Contact {model.name.split(' ')[0]}
               </Button>
@@ -204,13 +202,13 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                       />
                     </div>
                   </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
+                  <DialogContent className="max-w-3xl max-h-[90vh]">
                      <Image
                         src={src}
                         alt={`Portfolio image ${index + 1} for ${model.name}`}
                         width={800}
                         height={1067}
-                        className="object-contain rounded-lg"
+                        className="object-contain w-full h-full rounded-lg"
                       />
                   </DialogContent>
                 </Dialog>
@@ -219,6 +217,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           </div>
         </div>
       </div>
-    </div>
   );
 }
+
+    
