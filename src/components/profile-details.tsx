@@ -29,19 +29,17 @@ import {
   Info,
   Sigma,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Model } from '@/lib/mock-data';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
-type ProfilePageProps = {
-  params: { id: string };
+type ProfileDetailsProps = {
+  modelId: string;
 };
 
-export default function ProfilePage({ params }: ProfilePageProps) {
+export function ProfileDetails({ modelId }: ProfileDetailsProps) {
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
-  const modelId = params.id;
 
   useEffect(() => {
     const fetchModel = async (id: string) => {
@@ -57,7 +55,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
 
   if (loading) {
-    return <div className="flex h-[calc(100vh-8rem)] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
   if (!model) {
@@ -82,7 +80,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const socialLinks = model.socialLinks || [];
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 md:px-6 py-12">
       <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
         <div className="md:col-span-1 flex flex-col items-center">
           <Card className="w-full sticky top-24">
@@ -219,6 +216,5 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           </div>
         </div>
       </div>
-    </div>
   );
 }

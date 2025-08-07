@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { MapPin, CalendarDays, Briefcase, Building, Users, DollarSign, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { GigDetails } from "@/components/gig-details";
 
 export default function GigsPage() {
     const [gigs, setGigs] = useState<Gig[]>([]);
@@ -18,7 +19,6 @@ export default function GigsPage() {
         async function fetchGigs() {
             setLoading(true);
             const fetchedGigs = await getGigs();
-            // Only show verified gigs on the public listing
             const verifiedGigs = fetchedGigs.filter(gig => gig.status === 'Verified');
             setGigs(verifiedGigs);
             setLoading(false);
@@ -104,12 +104,14 @@ export default function GigsPage() {
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button asChild>
-                                    <Link href={`/gigs/${gig.id}`}>
-                                        <Briefcase className="mr-2"/>
-                                        View & Apply
-                                    </Link>
-                                </Button>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button><Briefcase className="mr-2"/>View & Apply</Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                                       <GigDetails gigId={gig.id} />
+                                    </DialogContent>
+                                </Dialog>
                             </CardFooter>
                         </Card>
                     )) : (

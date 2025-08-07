@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, X, Loader2, Briefcase, MapPin, CalendarDays, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { GigDetails } from '@/components/gig-details';
 
 export default function GigApprovalsPage() {
     const [pendingGigs, setPendingGigs] = useState<Gig[]>([]);
@@ -80,9 +81,14 @@ export default function GigApprovalsPage() {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-between">
-                                <Button size="sm" variant="outline" asChild>
-                                    <Link href={`/gigs/${gig.id}`} target="_blank">View Gig</Link>
-                                </Button>
+                                 <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button size="sm" variant="outline">View Gig</Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                                       <GigDetails gigId={gig.id} />
+                                    </DialogContent>
+                                </Dialog>
                                 <div className="flex gap-2">
                                      <Button 
                                         size="sm" 

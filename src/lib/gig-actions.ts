@@ -170,7 +170,7 @@ export async function updateGig(gigId: string, data: Partial<Gig>) {
     writeGigs(gigs);
 
     revalidatePath('/admin/gig-approvals');
-    revalidatePath(`/gigs/${gigId}`);
+    revalidatePath(`/gigs`);
 }
 
 // Application Functions
@@ -216,7 +216,7 @@ export async function applyForGig(gigId: string, modelId: string) {
     applications.push(newApplication);
     writeApplications(applications);
 
-    revalidatePath(`/gigs/${gigId}`);
+    revalidatePath(`/gigs`);
     revalidatePath('/brand/dashboard');
 }
 
