@@ -1,23 +1,9 @@
 
 'use server';
 
-import fs from 'fs';
-import path from 'path';
 import { revalidatePath } from 'next/cache';
-
-const gigsCsvFilePath = path.join(process.cwd(), 'public', 'gigs.csv');
-const applicationsCsvFilePath = path.join(process.cwd(), 'public', 'applications.csv');
-
-const GIG_HEADERS = [
-    'id', 'title', 'description', 'location', 'date', 'brandId', 'brandName',
-    'projectType', 'genderPreference', 'modelsNeeded', 'isGroupShoot', 'timing',
-    'travelProvided', 'accommodationProvided', 'paymentType', 'budgetMin', 
-    'budgetMax', 'paymentMode', 'paymentTimeline', 'ageRangeMin', 'ageRangeMax',
-    'heightRangeMin', 'heightRangeMax', 'experienceLevel', 'bodyTypePreferences',
-    'consentRequired', 'languageRequirement', 'portfolioLinkRequired',
-    'moodBoardUrl', 'referenceImages', 'videoBriefLink', 'visibility',
-    'applicationDeadline', 'allowDirectMessaging', 'showBrandName', 'status'
-];
+import { db } from './firebase';
+import { collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, query, where, deleteDoc, orderBy } from 'firebase/firestore';
 
 export type Gig = {
     id: string;
@@ -70,89 +56,33 @@ export type Application = {
     updatedDate: string;
 }
 
-const APPLICATION_HEADERS = ['id', 'gigId', 'modelId', 'appliedDate', 'status', 'updatedDate'];
-
-
-function readGigs(): Gig[] {
-    if(!fs.existsSync(gigsCsvFilePath)) {
-        fs.writeFileSync(gigsCsvFilePath, GIG_HEADERS.join(',') + '\n', 'utf-8');
-        return [];
-    }
-
-    const csvData = fs.readFileSync(gigsCsvFilePath, 'utf-8');
-    const lines = csvData.trim().split('\n');
-    if (lines.length <= 1) return [];
-
-    const headers = lines[0].split(',').map(h => h.trim());
-
-    return lines.slice(1).map(line => {
-        const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-        const entry = headers.reduce((obj, header, index) => {
-            const rawValue = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
-            if (['modelsNeeded', 'budgetMin', 'budgetMax', 'ageRangeMin', 'ageRangeMax', 'heightRangeMin', 'heightRangeMax'].includes(header)) {
-                (obj as any)[header] = rawValue ? parseInt(rawValue, 10) : undefined;
-            } else if (['isGroupShoot', 'travelProvided', 'accommodationProvided', 'portfolioLinkRequired', 'allowDirectMessaging', 'showBrandName'].includes(header)) {
-                (obj as any)[header] = rawValue.toLowerCase() === 'true';
-            } else if (['bodyTypePreferences', 'consentRequired', 'languageRequirement', 'referenceImages'].includes(header)) {
-                (obj as any)[header] = rawValue ? rawValue.split(';').map(s => s.trim()) : [];
-            } else {
-                 (obj as any)[header] = rawValue;
-            }
-            return obj;
-        }, {} as Gig);
-        return entry;
-    });
-}
-
-function writeGigs(gigs: Gig[]) {
-    const headerString = GIG_HEADERS.join(',');
-    const rows = gigs.map(gig => {
-        return GIG_HEADERS.map(header => {
-            const key = header as keyof Gig;
-            let value = gig[key];
-            
-            if (Array.isArray(value)) {
-                return `"${value.join(';')}"`;
-            }
-            if (value === null || value === undefined) {
-                return '';
-            }
-
-            let stringValue = String(value);
-             if (stringValue.includes(',')) {
-                return `"${stringValue.replace(/"/g, '""')}"`;
-            }
-            return stringValue;
-        }).join(',');
-    });
-    const csvString = [headerString, ...rows].join('\n') + '\n';
-    fs.writeFileSync(gigsCsvFilePath, csvString, 'utf-8');
-}
+const gigsCollection = collection(db, 'gigs');
+const applicationsCollection = collection(db, 'applications');
 
 
 export async function createGig(gigData: Omit<Gig, 'id' | 'status'>) {
-    const gigs = readGigs();
-    const newId = (gigs.length > 0 ? Math.max(...gigs.map(g => parseInt(g.id, 10))) : 0) + 1;
-    
-    const newGig: Gig = {
+    const newGigRef = await addDoc(gigsCollection, {
         ...gigData,
-        id: newId.toString(),
         status: 'Pending',
-    };
-
-    gigs.push(newGig);
-    writeGigs(gigs);
+    });
+    
+    await updateDoc(newGigRef, { id: newGigRef.id });
 
     revalidatePath('/gigs');
     revalidatePath('/brand/dashboard');
 }
 
-
 export async function getGigs(): Promise<Gig[]> {
     try {
-        return readGigs().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const q = query(gigsCollection, orderBy("date", "desc"));
+        const querySnapshot = await getDocs(q);
+        const gigs: Gig[] = [];
+        querySnapshot.forEach((doc) => {
+            gigs.push({ id: doc.id, ...doc.data() } as Gig);
+        });
+        return gigs;
     } catch (error) {
-        console.error('Error reading or parsing gigs.csv:', error);
+        console.error('Error getting gigs:', error);
         return [];
     }
 }
@@ -163,114 +93,95 @@ export async function getGigsByBrandId(brandId: string): Promise<Gig[]> {
 }
 
 export async function getGigById(id: string): Promise<Gig | null> {
-    const allGigs = await getGigs();
-    return allGigs.find(gig => gig.id === id) || null;
+    try {
+        const docRef = doc(db, 'gigs', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return { id: docSnap.id, ...docSnap.data() } as Gig;
+        }
+        return null;
+    } catch(e) {
+        console.error(e);
+        return null;
+    }
 }
 
 export async function updateGig(gigId: string, data: Partial<Gig>) {
-    const gigs = readGigs();
-    const gigIndex = gigs.findIndex(g => g.id === gigId);
-
-    if (gigIndex === -1) {
-        throw new Error('Gig not found');
-    }
-
-    gigs[gigIndex] = { ...gigs[gigIndex], ...data };
-    writeGigs(gigs);
+    const gigRef = doc(db, 'gigs', gigId);
+    await updateDoc(gigRef, data);
 
     revalidatePath('/admin/gig-approvals');
     revalidatePath(`/gigs`);
 }
 
-// Application Functions
-
-function readApplications(): Application[] {
-    if(!fs.existsSync(applicationsCsvFilePath)) {
-        fs.writeFileSync(applicationsCsvFilePath, APPLICATION_HEADERS.join(',') + '\n', 'utf-8');
-        return [];
-    }
-    const csvData = fs.readFileSync(applicationsCsvFilePath, 'utf-8');
-    const lines = csvData.trim().split('\n');
-    if (lines.length <= 1) return [];
-
-    return lines.slice(1).map(line => {
-        const [id, gigId, modelId, appliedDate, status, updatedDate] = line.split(',');
-        return { id, gigId, modelId, appliedDate, status: status as ApplicationStatus, updatedDate };
-    });
-}
-
-function writeApplications(applications: Application[]) {
-    const headerString = APPLICATION_HEADERS.join(',');
-    const rows = applications.map(app => [app.id, app.gigId, app.modelId, app.appliedDate, app.status, app.updatedDate].join(','));
-    const csvString = [headerString, ...rows].join('\n') + '\n';
-    fs.writeFileSync(applicationsCsvFilePath, csvString, 'utf-8');
-}
-
 export async function applyForGig(gigId: string, modelId: string) {
-    const applications = readApplications();
-    const existingApplication = applications.find(app => app.gigId === gigId && app.modelId === modelId);
+    const q = query(applicationsCollection, where("gigId", "==", gigId), where("modelId", "==", modelId));
+    const querySnapshot = await getDocs(q);
 
-    if (existingApplication) {
+    if (!querySnapshot.empty) {
         throw new Error('You have already applied for this gig.');
     }
-    const newId = (applications.length > 0 ? Math.max(...applications.map(app => parseInt(app.id))) : 0) + 1;
-    const now = new Date().toISOString();
 
-    const newApplication: Application = {
-        id: newId.toString(),
+    const now = new Date().toISOString();
+    const newAppRef = await addDoc(applicationsCollection, {
         gigId,
         modelId,
         appliedDate: now,
         status: 'Applied',
         updatedDate: now,
-    };
+    });
 
-    applications.push(newApplication);
-    writeApplications(applications);
+    await updateDoc(newAppRef, { id: newAppRef.id });
 
     revalidatePath(`/gigs`);
     revalidatePath('/brand/dashboard');
 }
 
 export async function getApplicantsByGigId(gigId: string): Promise<Application[]> {
-    const applications = readApplications();
-    return applications.filter(app => app.gigId === gigId);
+    const q = query(applicationsCollection, where("gigId", "==", gigId));
+    const querySnapshot = await getDocs(q);
+    const applications: Application[] = [];
+    querySnapshot.forEach(doc => {
+        applications.push({ id: doc.id, ...doc.data() } as Application);
+    });
+    return applications;
 }
 
 export async function getApplicationsByModelId(modelId: string): Promise<Application[]> {
-    const applications = readApplications();
-    return applications.filter(app => app.modelId === modelId);
+    const q = query(applicationsCollection, where("modelId", "==", modelId));
+    const querySnapshot = await getDocs(q);
+    const applications: Application[] = [];
+    querySnapshot.forEach(doc => {
+        applications.push({ id: doc.id, ...doc.data() } as Application);
+    });
+    return applications;
 }
 
 export async function updateApplicationStatus(applicationId: string, status: ApplicationStatus) {
-    const applications = readApplications();
-    const appIndex = applications.findIndex(app => app.id === applicationId);
-    if(appIndex === -1) {
-        throw new Error("Application not found");
-    }
-    applications[appIndex].status = status;
-    applications[appIndex].updatedDate = new Date().toISOString();
-    writeApplications(applications);
+    const appRef = doc(db, 'applications', applicationId);
+    await updateDoc(appRef, {
+        status: status,
+        updatedDate: new Date().toISOString(),
+    });
+    
+    const appSnap = await getDoc(appRef);
+    const appData = appSnap.data();
 
     revalidatePath('/brand/dashboard');
-    revalidatePath(`/gigs/${applications[appIndex].gigId}`);
+    if(appData) {
+        revalidatePath(`/gigs/${appData.gigId}`);
+    }
 }
 
 export async function deleteGig(gigId: string): Promise<{ success: boolean }> {
-    let gigs = readGigs();
-    let applications = readApplications();
-    
-    const initialGigsLength = gigs.length;
-    gigs = gigs.filter(g => g.id !== gigId);
+    const gigRef = doc(db, 'gigs', gigId);
+    await deleteDoc(gigRef);
 
-    if (gigs.length === initialGigsLength) {
-        throw new Error('Gig not found');
-    }
-
-    applications = applications.filter(app => app.gigId !== gigId);
-    
-    writeGigs(gigs);
-    writeApplications(applications);
+    const q = query(applicationsCollection, where("gigId", "==", gigId));
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach(async (doc) => {
+        await deleteDoc(doc.ref);
+    });
     
     revalidatePath('/brand/dashboard');
     revalidatePath('/gigs');

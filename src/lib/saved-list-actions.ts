@@ -1,9 +1,9 @@
 
 'use server';
 
-import fs from 'fs';
-import path from 'path';
 import { revalidatePath } from 'next/cache';
+import { db } from './firebase';
+import { collection, doc, getDocs, getDoc, setDoc, addDoc, updateDoc, query, where, deleteDoc } from 'firebase/firestore';
 
 export type SavedList = {
     id: string;
@@ -12,112 +12,77 @@ export type SavedList = {
     modelIds: string[];
 };
 
-const csvFilePath = path.join(process.cwd(), 'public', 'saved-lists.csv');
-const SAVED_LIST_HEADERS = ['id', 'brandId', 'name', 'modelIds'];
+const savedListsCollection = collection(db, 'saved-lists');
 
-function readSavedLists(): SavedList[] {
-    if (!fs.existsSync(csvFilePath)) {
-        fs.writeFileSync(csvFilePath, SAVED_LIST_HEADERS.join(',') + '\n', 'utf-8');
-        return [];
-    }
-    const csvData = fs.readFileSync(csvFilePath, 'utf-8');
-    const lines = csvData.trim().split('\n');
-    if (lines.length <= 1) return [];
-
-    const headers = lines[0].split(',').map(h => h.trim());
-    return lines.slice(1).map(line => {
-        const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-        const entry = headers.reduce((obj, header, index) => {
-            let value = values[index] ? values[index].trim().replace(/^"|"$/g, '') : '';
-            if (header === 'modelIds') {
-                (obj as any)[header] = value ? value.split(';').map(s => s.trim()) : [];
-            } else {
-                (obj as any)[header] = value;
-            }
-            return obj;
-        }, {} as SavedList);
-        return entry;
-    });
-}
-
-function writeSavedLists(lists: SavedList[]) {
-    const headerString = SAVED_LIST_HEADERS.join(',');
-    const rows = lists.map(list => {
-        const modelIdsString = list.modelIds.join(';');
-        return [list.id, list.brandId, list.name, `"${modelIdsString}"`].join(',');
-    });
-    const csvString = [headerString, ...rows].join('\n') + '\n';
-    fs.writeFileSync(csvFilePath, csvString, 'utf-8');
-}
 
 export async function getListsByBrandId(brandId: string): Promise<SavedList[]> {
-    const allLists = readSavedLists();
-    return allLists.filter(list => list.brandId === brandId);
+    const q = query(savedListsCollection, where("brandId", "==", brandId));
+    const querySnapshot = await getDocs(q);
+    const lists: SavedList[] = [];
+    querySnapshot.forEach(doc => {
+        lists.push({ id: doc.id, ...doc.data() } as SavedList);
+    });
+    return lists;
 }
 
 export async function getListById(listId: string): Promise<SavedList | null> {
-    const allLists = readSavedLists();
-    return allLists.find(list => list.id === listId) || null;
+    const docRef = doc(db, 'saved-lists', listId);
+    const docSnap = await getDoc(docRef);
+    if(docSnap.exists()){
+        return {id: docSnap.id, ...docSnap.data()} as SavedList;
+    }
+    return null;
 }
 
 export async function createSavedList(brandId: string, name: string): Promise<SavedList> {
-    const lists = readSavedLists();
-    const newId = (lists.length > 0 ? Math.max(...lists.map(l => parseInt(l.id, 10))) : 0) + 1;
-    const newList: SavedList = {
-        id: newId.toString(),
+    const newListData = {
         brandId,
         name,
         modelIds: [],
     };
-    lists.push(newList);
-    writeSavedLists(lists);
+    const newDocRef = await addDoc(savedListsCollection, newListData);
+    const newList = { id: newDocRef.id, ...newListData };
+    await updateDoc(newDocRef, {id: newDocRef.id});
+    
     revalidatePath('/brand/dashboard');
     return newList;
 }
 
 export async function deleteList(listId: string): Promise<{ success: boolean }> {
-    let lists = readSavedLists();
-    const initialLength = lists.length;
-    lists = lists.filter(l => l.id !== listId);
-
-    if (lists.length === initialLength) {
-        throw new Error('List not found');
-    }
-
-    writeSavedLists(lists);
+    const listRef = doc(db, 'saved-lists', listId);
+    await deleteDoc(listRef);
     revalidatePath('/brand/dashboard');
     return { success: true };
 }
 
 
 export async function addModelsToList(listId: string, modelIdsToAdd: string[]): Promise<SavedList> {
-    const lists = readSavedLists();
-    const listIndex = lists.findIndex(l => l.id === listId);
-    if (listIndex === -1) {
+    const listRef = doc(db, 'saved-lists', listId);
+    const listSnap = await getDoc(listRef);
+    if (!listSnap.exists()) {
         throw new Error('List not found');
     }
-    const list = lists[listIndex];
+    const list = listSnap.data() as SavedList;
     
-    // Combine old and new model IDs, ensuring no duplicates
     const updatedModelIds = [...new Set([...list.modelIds, ...modelIdsToAdd])];
     
-    list.modelIds = updatedModelIds;
-    lists[listIndex] = list;
+    await updateDoc(listRef, { modelIds: updatedModelIds });
 
-    writeSavedLists(lists);
     revalidatePath('/brand/dashboard');
-    return list;
+    return { ...list, id: listId, modelIds: updatedModelIds };
 }
 
-export async function removeModelFromList(listId: string, modelId: string): Promise<SavedList> {
-    const lists = readSavedLists();
-    const listIndex = lists.findIndex(l => l.id === listId);
-    if (listIndex === -1) {
+export async function removeModelFromList(listId: string, modelIdToRemove: string): Promise<SavedList> {
+    const listRef = doc(db, 'saved-lists', listId);
+    const listSnap = await getDoc(listRef);
+    if (!listSnap.exists()) {
         throw new Error('List not found');
     }
-    const list = lists[listIndex];
-    list.modelIds = list.modelIds.filter(id => id !== modelId);
-    writeSavedLists(lists);
+    const list = listSnap.data() as SavedList;
+
+    const updatedModelIds = list.modelIds.filter(id => id !== modelIdToRemove);
+    await updateDoc(listRef, { modelIds: updatedModelIds });
+
     revalidatePath('/brand/dashboard');
-    return list;
+    return { ...list, id: listId, modelIds: updatedModelIds };
 }

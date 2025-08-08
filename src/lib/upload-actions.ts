@@ -1,8 +1,8 @@
 
 'use server';
 
-import fs from 'fs/promises';
-import path from 'path';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { storage } from './firebase';
 
 export async function uploadImage(formData: FormData, maxSizeInMB: number) {
   const file = formData.get('file') as File;
@@ -17,46 +17,37 @@ export async function uploadImage(formData: FormData, maxSizeInMB: number) {
      return { success: false, message: `File is too large. Max size is ${maxSizeInMB}MB.` };
   }
 
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  try {
-    await fs.mkdir(uploadDir, { recursive: true });
-  } catch (error: any) {
-    if (error.code !== 'EEXIST') {
-      console.error('Error creating upload directory:', error);
-      return { success: false, message: 'Could not create upload directory.' };
-    }
-  }
-
   const buffer = Buffer.from(await file.arrayBuffer());
   const filename = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
-  const filePath = path.join(uploadDir, filename);
+  const storageRef = ref(storage, `uploads/${filename}`);
 
   try {
-    await fs.writeFile(filePath, buffer);
-    const publicPath = `/uploads/${filename}`;
-    return { success: true, filePath: publicPath };
+    const snapshot = await uploadBytes(storageRef, buffer, {
+        contentType: file.type,
+    });
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return { success: true, filePath: downloadURL };
   } catch (error) {
-    console.error('Error saving file:', error);
-    return { success: false, message: 'Failed to save file.' };
+    console.error('Error uploading file to Firebase Storage:', error);
+    return { success: false, message: 'Failed to upload file.' };
   }
 }
 
 export async function deleteImage(filePath: string) {
-    if (!filePath || !filePath.startsWith('/uploads/')) {
-        console.warn('Skipping deletion for invalid or non-upload path:', filePath);
+    if (!filePath || !filePath.includes('firebasestorage.googleapis.com')) {
+        console.warn('Skipping deletion for invalid or non-firebase storage path:', filePath);
         return { success: true, message: 'No file to delete or path is invalid.' };
     }
     
-    const serverFilePath = path.join(process.cwd(), 'public', filePath);
-    
     try {
-        await fs.unlink(serverFilePath);
+        const storageRef = ref(storage, filePath);
+        await deleteObject(storageRef);
         return { success: true, message: 'File deleted successfully.' };
     } catch (error: any) {
-        if (error.code === 'ENOENT') {
+        if (error.code === 'storage/object-not-found') {
              return { success: true, message: 'File did not exist, no action needed.' };
         }
-        console.error(`Failed to delete file: ${serverFilePath}`, error);
+        console.error(`Failed to delete file from Firebase Storage: ${filePath}`, error);
         return { success: false, message: 'Failed to delete file.' };
     }
 }

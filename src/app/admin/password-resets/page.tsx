@@ -31,8 +31,7 @@ export default function PasswordResetsPage() {
   const fetchRequests = async () => {
     setLoading(true);
     const allRequests = await readPasswordResetRequests();
-    const sortedRequests = allRequests.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
-    setRequests(sortedRequests);
+    setRequests(allRequests);
     setLoading(false);
   };
 
@@ -40,12 +39,11 @@ export default function PasswordResetsPage() {
     fetchRequests();
   }, []);
 
-  const handleStatusUpdate = async (request: PasswordResetRequest, newStatus: 'completed' | 'rejected') => {
-    const id = `${request.email}-${request.requestedAt}`;
-    setUpdatingId(id);
+  const handleStatusUpdate = async (requestId: string, newStatus: 'completed' | 'rejected') => {
+    setUpdatingId(requestId);
     try {
-        await updatePasswordResetStatus(request.email, request.requestedAt, newStatus);
-        toast({ title: "Success", description: `Request for ${request.email} has been marked as ${newStatus}.`});
+        await updatePasswordResetStatus(requestId, newStatus);
+        toast({ title: "Success", description: `Request has been marked as ${newStatus}.`});
         await fetchRequests(); // Re-fetch to update the view
     } catch(e: any) {
         toast({ title: "Error", description: e.message, variant: "destructive"});
@@ -92,9 +90,8 @@ export default function PasswordResetsPage() {
             </TableHeader>
             <TableBody>
               {requests.map(req => {
-                const uniqueId = `${req.email}-${req.requestedAt}`;
                 return (
-                    <TableRow key={uniqueId}>
+                    <TableRow key={req.id}>
                     <TableCell className="font-medium">{req.email}</TableCell>
                     <TableCell>{req.phone || 'N/A'}</TableCell>
                     <TableCell><Badge variant="outline">{req.contactMethod}</Badge></TableCell>
@@ -105,11 +102,11 @@ export default function PasswordResetsPage() {
                     <TableCell className="text-right">
                         {req.status === 'pending' ? (
                             <div className="flex gap-2 justify-end">
-                                <Button size="icon" variant="ghost" className='text-red-500 hover:bg-red-100' onClick={() => handleStatusUpdate(req, 'rejected')} disabled={updatingId === uniqueId}>
-                                    {updatingId === uniqueId ? <Loader2 className='animate-spin'/> : <X className='h-4 w-4'/>}
+                                <Button size="icon" variant="ghost" className='text-red-500 hover:bg-red-100' onClick={() => handleStatusUpdate(req.id, 'rejected')} disabled={updatingId === req.id}>
+                                    {updatingId === req.id ? <Loader2 className='animate-spin'/> : <X className='h-4 w-4'/>}
                                 </Button>
-                                <Button size="icon" variant="ghost" className='text-green-500 hover:bg-green-100' onClick={() => handleStatusUpdate(req, 'completed')} disabled={updatingId === uniqueId}>
-                                    {updatingId === uniqueId ? <Loader2 className='animate-spin'/> : <Check className='h-4 w-4'/>}
+                                <Button size="icon" variant="ghost" className='text-green-500 hover:bg-green-100' onClick={() => handleStatusUpdate(req.id, 'completed')} disabled={updatingId === req.id}>
+                                    {updatingId === req.id ? <Loader2 className='animate-spin'/> : <Check className='h-4 w-4'/>}
                                 </Button>
                             </div>
                         ) : 'Processed'}
